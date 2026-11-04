@@ -59,6 +59,7 @@ const atlasState = {
   hover: null,
   focus: null,
   tween: null,
+  fullscreen: false,
   detailId: null,
   target: new THREE.Vector3(),
   targetGoal: new THREE.Vector3(),
@@ -520,9 +521,10 @@ function focusView(node, yaw) {
   const aspect = atlasW / atlasH;
   const vFov = (camera.fov * Math.PI) / 180;
   const hFov = 2 * Math.atan(Math.tan(vFov / 2) * aspect);
-  const diameterFraction = 0.54;
+  const diameterFraction = atlasState.fullscreen ? 0.60 : 0.54;
   const distance = Math.max(node.radius * 2.2, node.radius / Math.tan((diameterFraction * hFov) / 2));
-  const shift = 0.21 * 2 * distance * Math.tan(hFov / 2);
+  const shiftFraction = atlasState.fullscreen ? 0.19 : 0.21;
+  const shift = shiftFraction * 2 * distance * Math.tan(hFov / 2);
   const useYaw = yaw == null ? atlasState.yaw : yaw;
   const right = new THREE.Vector3(Math.cos(useYaw), 0, -Math.sin(useYaw));
   return {
@@ -620,6 +622,7 @@ function updateFocusHud() {
   const name = $('#atlas-focus-name');
   const meta = $('#atlas-focus-meta');
   const stats = $('#atlas-focus-stats');
+  const storyHost = $('#atlas-focus-story');
   const sitesHost = $('#atlas-focus-sites');
   if (name) name.textContent = zhName(loc);
   if (meta) meta.textContent = `${loc.name} · ${typeLabel(loc.type)}`;
@@ -629,14 +632,25 @@ function updateFocusHud() {
       .filter((item) => item.host && item.host.id === loc.id && item.loc.type !== 'moon')
       .sort((a, b) => (siteRank[a.loc.type] == null ? 3 : siteRank[a.loc.type]) - (siteRank[b.loc.type] == null ? 3 : siteRank[b.loc.type]))
     : [];
+  const moons = SC.locations.filter((item) => item.system === loc.system && item.type === 'moon' && item.parent === loc.name).length;
   if (stats) {
-    const moons = SC.locations.filter((item) => item.system === loc.system && item.type === 'moon' && item.parent === loc.name).length;
     const risk = riskLabel(loc.danger);
     stats.innerHTML = `<span><b>${moons}</b>卫星</span><span><b>${sites.length}</b>地点</span>${risk ? `<span class="risk d${loc.danger}"><b>${esc(risk)}</b>风险</span>` : ''}`;
   }
+  if (storyHost) {
+    const story = storyFor(loc);
+    const siteNames = sites.map((item) => zhName(item.loc)).filter(Boolean).join('、');
+    const summary = `该行星记录有 ${moons} 颗卫星与 ${sites.length} 个可访问地点${siteNames ? '，主要地点包括' + siteNames : ''}。`;
+    const body = story ? story.story.map((paragraph) => `<p>${esc(paragraph)}</p>`).join('') : `<p>${esc(SC.zhText(loc.desc || ''))}</p>`;
+    storyHost.innerHTML = body + `<p class="atlas-focus-summary">${esc(summary)}</p>`;
+  }
   if (sitesHost) {
     sitesHost.innerHTML = sites.length
-      ? sites.map((item) => `<button type="button" data-focus-site="${esc(item.loc.id)}"><b>${esc(zhName(item.loc))}</b><small>${esc(typeLabel(item.loc.type))}</small></button>`).join('')
+      ? sites.map((item) => {
+        const siteStory = storyFor(item.loc);
+        const siteText = siteStory ? siteStory.tagline : SC.zhText(item.loc.desc || '');
+        return `<button type="button" data-focus-site="${esc(item.loc.id)}"><b>${esc(zhName(item.loc))}</b><small>${esc(typeLabel(item.loc.type))}</small><em>${esc(siteText)}</em></button>`;
+      }).join('')
       : '<span class="atlas-focus-empty">暂无附属地点</span>';
   }
 }
@@ -666,6 +680,28 @@ function pickAtlas(event) {
 }
 
 /* ---------- camera ---------- */
+function updateFullscreenButton() {
+  $$('[data-atlas-action="fullscreen"]').forEach((button) => {
+    button.textContent = atlasState.fullscreen ? '退出全屏' : '全屏星图';
+  });
+}
+
+function toggleFullscreen(force) {
+  const stage = $('#atlas-stage');
+  if (!stage) return;
+  atlasState.fullscreen = force == null ? !atlasState.fullscreen : force;
+  stage.classList.toggle('is-fullscreen', atlasState.fullscreen);
+  document.body.classList.toggle('atlas-fullscreen', atlasState.fullscreen);
+  updateFullscreenButton();
+  requestAnimationFrame(() => {
+    resizeAtlas();
+    if (atlasState.focus && atlasState.layout) {
+      const node = atlasState.layout.positions[atlasState.focus];
+      if (node) startCameraTween(focusView(node), 0.9);
+    }
+  });
+}
+
 function bindAtlas() {
   const canvas = renderer.domElement;
   canvas.style.cursor = 'grab';
@@ -745,6 +781,7 @@ function bindAtlas() {
   $$('[data-atlas-action]').forEach((button) => {
     button.addEventListener('click', () => {
       const action = button.dataset.atlasAction;
+      if (action === 'fullscreen') { toggleFullscreen(); return; }
       if (action === 'zoom-in' || action === 'zoom-out') atlasState.tween = null;
       const range = zoomRange();
       if (action === 'zoom-in') atlasState.distanceGoal = Math.max(range.min, atlasState.distanceGoal * 0.84);
@@ -764,7 +801,9 @@ function bindAtlas() {
   });
   window.addEventListener('resize', resizeAtlas);
   document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape' && atlasState.focus && !(els.dialog && els.dialog.open)) leaveFocus();
+    if (event.key !== 'Escape' || (els.dialog && els.dialog.open)) return;
+    if (atlasState.fullscreen) { toggleFullscreen(false); return; }
+    if (atlasState.focus) leaveFocus();
   });
 }
 
