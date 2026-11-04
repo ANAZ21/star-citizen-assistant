@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>飞船配件 · MOBIGLAS 星际公民助手</title>
+  <meta name="description" content="星际公民飞船配件数据库：动力装置、护盾发生器、冷却器与量子引擎的性能参数、aUEC 价格和购买地点。">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Cpath d='M20 3L34 11v18L20 37 6 29V11L20 3z' fill='%2305080e' stroke='%2363d8ff' stroke-width='2'/%3E%3Ccircle cx='20' cy='20' r='4' fill='%2363d8ff'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="assets/css/site.css?v=20261134">
+  <link rel="stylesheet" href="assets/css/components.css?v=20261134">
+</head>
+<body data-page="components">
+  <header id="site-header"></header>
+
+  <main class="app-main">
+    <section class="components-hero">
+      <div class="container components-hero-grid">
+        <div class="components-hero-copy">
+          <div class="kicker">Component Index</div>
+          <h1 class="large-title">飞船配件</h1>
+          <p class="page-sub">动力装置、护盾发生器、冷却器与量子引擎。按类型和尺寸检索，核对商店价格与购买地点。</p>
+          <div class="page-meta">
+            <span><b id="component-hero-count">176</b> 件配件</span>
+            <span><b id="component-hero-shops">1,026</b> 条购买记录</span>
+            <span><b>4</b> 个类别</span>
+          </div>
+        </div>
+        <div class="component-matrix" id="component-matrix" aria-label="配件类别"></div>
+      </div>
+    </section>
+
+    <section class="section components-index">
+      <div class="container">
+        <div class="components-toolbar">
+          <div class="ios-search-field" style="flex:1;min-width:260px">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5L21 21"/></svg>
+            <input id="component-search" type="search" placeholder="搜索配件、制造商、商店或地点" autocomplete="off" aria-label="搜索配件">
+          </div>
+          <select class="filter-select" id="component-size-filter" aria-label="尺寸">
+            <option value="all">全部尺寸</option>
+          </select>
+          <select class="filter-select" id="component-sort" aria-label="排序">
+            <option value="default">默认排序</option>
+            <option value="price-asc">价格从低到高</option>
+            <option value="price-desc">价格从高到低</option>
+            <option value="size-asc">尺寸从小到大</option>
+            <option value="name">按名称</option>
+          </select>
+          <button class="chip" id="component-reset" type="button">重置筛选</button>
+        </div>
+
+        <div class="component-type-tabs" id="component-type-tabs" role="tablist" aria-label="配件类别"></div>
+
+        <div class="results-line">
+          <span id="component-count">共 176 件 · 当前 176 件</span>
+          <span class="footnote text-secondary">价格单位 aUEC · CStone 社区记录</span>
+        </div>
+
+        <div class="component-grid" id="component-grid"></div>
+        <div class="component-pager" id="component-pager"></div>
+      </div>
+    </section>
+  </main>
+
+  <dialog class="modal component-modal" id="component-dialog" aria-label="配件详情">
+    <div class="modal-inner component-modal-inner" id="component-modal-inner"></div>
+  </dialog>
+
+  <footer id="site-footer"></footer>
+
+  <script src="assets/js/data-ships.js"></script>
+  <script src="assets/js/data-locations.js"></script>
+  <script src="assets/js/data-i18n.js?v=20261134"></script>
+  <script src="assets/js/data-shops.js"></script>
+  <script src="assets/js/data-ship-stats.js?v=20261134"></script>
+  <script src="assets/js/data-nyx.js?v=20261134"></script>
+  <script src="assets/js/data-components.js?v=20261134"></script>
+  <script src="assets/js/common.js?v=20261134"></script>
+  <script src="assets/js/components.js?v=20261134"></script>
+</body>
+</html>

@@ -66,3 +66,9 @@
 - 飞船图片来自 RSI 官网对应飞船页面，版权归 Cloud Imperium Games。
 - 字体：Rajdhani、JetBrains Mono，SIL Open Font License 1.1。
 - 星系 2D 预览图来自 Star Citizen Wiki，作者 Astrid，CC BY-SA 4.0。
+
+## 配件与武器数据
+
+- 飞船配件与商店价格来自 CStone Universal Item Finder（finder.cstone.space）的社区众包记录；配件中文名与制造商译名取自本机游戏内简体中文汉化包 `global.ini`。
+- 舰载武器 DPS、持续 DPS、射程与单发伤害来自 Star Citizen Wiki API（api.star-citizen.wiki）的当前 4.x 物品数据。
+- 以上均为玩家资料整理，不代表 Cloud Imperium Games 官方数据；游戏版本更新后可能发生变化。

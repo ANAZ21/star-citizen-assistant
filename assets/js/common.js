@@ -95,6 +95,20 @@
     return '舰载武器';
   };
 
+  var weaponStatsLookup = null;
+  function getWeaponStatsLookup() {
+    if (weaponStatsLookup) return weaponStatsLookup;
+    var raw = window.SC_WEAPON_STATS || {};
+    weaponStatsLookup = {};
+    Object.keys(raw).forEach(function (key) { weaponStatsLookup[normalizeKey(key)] = raw[key]; });
+    return weaponStatsLookup;
+  }
+
+  SC.weaponStats = function (weapon) {
+    var name = typeof weapon === 'string' ? weapon : (weapon && weapon.name);
+    return getWeaponStatsLookup()[normalizeKey(name)] || null;
+  };
+
   SC.serviceName = function (name) {
     return String(name == null ? '' : name)
       .replace(/船舶商店/g, '飞船商店')
@@ -250,8 +264,8 @@
     location: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s7-5.2 7-11a7 7 0 10-14 0c0 5.8 7 11 7 11z"/><circle cx="12" cy="10" r="2.4"/></svg>'
   };
 
-  var PAGE_TITLES = { home: '总览', ships: '飞船数据库', systems: '星系与商店' };
-  var PAGE_KICKERS = { home: 'HOME', ships: 'SHIPS', systems: 'SYSTEMS', guide: 'GUIDE' };
+  var PAGE_TITLES = { home: '总览', ships: '飞船数据库', components: '飞船配件', systems: '星系与商店' };
+  var PAGE_KICKERS = { home: 'HOME', ships: 'SHIPS', components: 'COMPONENTS', systems: 'SYSTEMS' };
 
   function brandMark() {
     return '<svg class="brand-mark" viewBox="0 0 40 40" fill="none" aria-hidden="true">' +
@@ -269,6 +283,7 @@
     var links = [
       { id: 'home', href: 'index.html', label: '总览' },
       { id: 'ships', href: 'ships.html', label: '飞船' },
+      { id: 'components', href: 'components.html', label: '配件' },
       { id: 'systems', href: 'systems.html', label: '星系' }
     ];
     var nav = links.map(function (l) {
@@ -305,6 +320,7 @@
         '<div class="ios-footer-col">' +
           '<h4>数据库</h4>' +
           '<a href="ships.html">飞船档案</a>' +
+          '<a href="components.html">飞船配件</a>' +
           '<a href="systems.html">星系与地点</a>' +
           '<a href="systems.html#locations">地点库存</a>' +
         '</div>' +

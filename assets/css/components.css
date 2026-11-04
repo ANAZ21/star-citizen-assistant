@@ -1,0 +1,252 @@
+/* =========================================================
+   MOBIGLAS · 飞船配件索引
+   ========================================================= */
+
+.components-hero {
+  position: relative;
+  overflow: hidden;
+  padding: 30px 0 30px;
+  border-bottom: 1px solid rgba(255, 255, 255, .08);
+  background:
+    radial-gradient(ellipse at 78% 18%, rgba(100, 210, 255, .13), transparent 46%),
+    radial-gradient(ellipse at 16% 86%, rgba(255, 159, 10, .07), transparent 42%),
+    linear-gradient(180deg, rgba(10, 15, 21, .7), transparent 88%);
+}
+.components-hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: .5;
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, .035) 1px, transparent 1px),
+    linear-gradient(rgba(255, 255, 255, .035) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: linear-gradient(180deg, #000, transparent 78%);
+  -webkit-mask-image: linear-gradient(180deg, #000, transparent 78%);
+}
+.components-hero-grid {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1.08fr) minmax(420px, .92fr);
+  gap: 48px;
+  align-items: center;
+}
+.components-hero .large-title {
+  margin-top: 6px;
+  font-size: clamp(46px, 4.6vw, 64px);
+  line-height: 1.05;
+  letter-spacing: -.035em;
+}
+.components-hero .page-sub { max-width: 600px; margin-top: 10px; font-size: 16px; line-height: 1.6; }
+.components-hero .page-meta { margin-top: 22px; }
+.components-hero .page-meta b { color: var(--label); font-family: var(--font-num); font-size: 18px; font-weight: 600; }
+
+.component-matrix {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid rgba(255, 255, 255, .1);
+  border-radius: 18px;
+  background: rgba(6, 10, 14, .62);
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, .36);
+}
+.component-matrix-cell {
+  position: relative;
+  min-height: 110px;
+  padding: 15px 16px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, .07);
+  border-radius: 12px;
+  background: linear-gradient(155deg, rgba(255, 255, 255, .055), rgba(255, 255, 255, .018));
+  text-align: left;
+  transition: border-color .25s, background .25s, transform .25s var(--ease);
+}
+.component-matrix-cell::after {
+  content: "";
+  position: absolute;
+  right: -26px;
+  bottom: -36px;
+  width: 100px;
+  height: 100px;
+  border: 1px solid rgba(100, 210, 255, .18);
+  border-radius: 50%;
+  box-shadow: 0 0 0 14px rgba(100, 210, 255, .035), 0 0 0 30px rgba(100, 210, 255, .02);
+}
+.component-matrix-cell:hover {
+  border-color: rgba(100, 210, 255, .4);
+  background: linear-gradient(155deg, rgba(100, 210, 255, .1), rgba(255, 255, 255, .025));
+  transform: translateY(-2px);
+}
+.component-matrix-label { display: block; color: var(--label-secondary); font-size: 12px; }
+.component-matrix-cell b {
+  display: block;
+  margin-top: 14px;
+  color: var(--label);
+  font-family: var(--font-num);
+  font-size: 34px;
+  line-height: 1;
+  font-weight: 600;
+}
+.component-matrix-cell small { display: block; margin-top: 7px; color: var(--label-tertiary); font-family: var(--font-mono); font-size: 9px; }
+
+.components-index { padding-top: 28px; }
+.components-toolbar { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
+.components-toolbar .ios-search-field { flex: 1 1 320px; }
+.components-toolbar .filter-select { min-width: 138px; }
+.components-toolbar .chip { flex-shrink: 0; }
+
+.component-type-tabs {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  margin-top: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, .08);
+  overflow-x: auto;
+}
+.component-type-tabs button {
+  min-height: 36px;
+  padding: 0 13px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--label-secondary);
+  font-size: 13px;
+  white-space: nowrap;
+  transition: color .18s, background .18s, border-color .18s;
+}
+.component-type-tabs button:hover { color: var(--label); background: rgba(255, 255, 255, .05); }
+.component-type-tabs button.active { border-color: rgba(100, 210, 255, .34); background: rgba(100, 210, 255, .1); color: var(--cyan); }
+.component-type-tabs small { margin-left: 4px; color: var(--label-tertiary); font-family: var(--font-num); font-size: 12px; }
+.component-type-tabs button.active small { color: rgba(100, 210, 255, .75); }
+
+.component-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 18px;
+}
+.component-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 17px 18px 15px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, .09);
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(29, 32, 37, .82), rgba(14, 17, 21, .92));
+  cursor: pointer;
+  transform-style: preserve-3d;
+  transition: transform .35s var(--ease), border-color .3s, box-shadow .35s, background .3s;
+}
+.component-card::before {
+  content: "";
+  position: absolute;
+  z-index: 3;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(circle at var(--mx, 50%) var(--my, 50%), rgba(100, 210, 255, .14), transparent 44%);
+  transition: opacity .3s var(--ease);
+}
+.component-card:hover { border-color: rgba(100, 210, 255, .24); box-shadow: 0 24px 56px rgba(0, 0, 0, .45); transform: translateY(-4px) perspective(1100px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)); }
+.component-card:hover::before { opacity: 1; }
+.component-card:focus-visible { outline: 2px solid var(--blue); outline-offset: 3px; }
+.component-card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.component-type { color: var(--cyan); font-family: var(--font-mono); font-size: 9px; letter-spacing: .09em; text-transform: uppercase; }
+.component-size {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 26px;
+  border: 1px solid rgba(255, 255, 255, .14);
+  border-radius: 6px;
+  color: var(--label-secondary);
+  font-family: var(--font-num);
+  font-size: 14px;
+  font-weight: 600;
+}
+.component-name { margin-top: 12px; color: var(--label); font-size: 22px; line-height: 1.15; font-weight: 600; letter-spacing: -.025em; }
+.component-name small { display: block; margin-top: 4px; color: var(--label-tertiary); font-family: var(--font-mono); font-size: 10px; line-height: 1.4; font-weight: 400; letter-spacing: 0; }
+.component-maker { margin-top: 6px; color: var(--label-secondary); font-size: 12px; line-height: 1.45; }
+.component-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 9px 14px; margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(255, 255, 255, .07); }
+.component-stats span { min-width: 0; }
+.component-stats i { display: block; color: var(--label-tertiary); font-size: 10px; font-style: normal; }
+.component-stats b { display: block; margin-top: 2px; color: var(--label); font-family: var(--font-num); font-size: 16px; line-height: 1.25; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.component-shops { display: grid; gap: 2px; margin-top: 13px; padding-top: 10px; border-top: 1px solid rgba(255, 255, 255, .07); }
+.component-shop-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 38px;
+  padding: 4px 6px;
+  border-radius: 7px;
+  color: var(--label);
+  transition: background .16s;
+}
+a.component-shop-row:hover { background: rgba(255, 255, 255, .06); }
+.component-shop-place { min-width: 0; }
+.component-shop-place b { display: block; color: var(--label-secondary); font-size: 11px; line-height: 1.3; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.component-shop-place small { display: block; margin-top: 1px; color: var(--label-tertiary); font-size: 10px; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.component-shop-price { flex-shrink: 0; text-align: right; }
+.component-shop-price b { display: block; color: var(--orange); font-family: var(--font-num); font-size: 15px; line-height: 1.1; font-weight: 600; }
+.component-shop-price small { display: block; margin-top: 1px; color: var(--label-tertiary); font-family: var(--font-mono); font-size: 8px; }
+.component-shop-more { padding: 5px 6px 2px; color: var(--label-tertiary); font-size: 10px; }
+.component-card-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: auto; padding-top: 12px; color: var(--label-tertiary); font-family: var(--font-mono); font-size: 9px; }
+
+.component-pager { display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 24px; padding-top: 18px; border-top: 1px solid rgba(255, 255, 255, .08); color: var(--label-secondary); font-size: 12px; }
+.component-pager button { min-height: 34px; min-width: 34px; padding: 0 11px; border: 1px solid rgba(255, 255, 255, .12); border-radius: 8px; background: rgba(255, 255, 255, .035); color: var(--label-secondary); font-size: 12px; }
+.component-pager button:hover:not(:disabled) { color: var(--label); border-color: rgba(100, 210, 255, .38); }
+.component-pager button.active { border-color: rgba(100, 210, 255, .45); background: rgba(100, 210, 255, .12); color: var(--cyan); }
+.component-pager button:disabled { opacity: .3; }
+.component-pager .component-pager-gap { padding: 0 4px; color: var(--label-tertiary); }
+
+.component-modal { width: min(780px, calc(100vw - 64px)); max-width: 780px; }
+.component-modal-inner { padding: 30px 30px 26px; border: 1px solid rgba(255, 255, 255, .11); border-radius: 18px; background: #0b0e12; }
+.component-modal-head { padding-right: 42px; }
+.component-modal-kicker { color: var(--cyan); font-family: var(--font-mono); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; }
+.component-modal-head h2 { margin-top: 8px; color: var(--label); font-size: 34px; line-height: 1.1; font-weight: 600; letter-spacing: -.03em; }
+.component-modal-head h2 small { display: block; margin-top: 5px; color: var(--label-tertiary); font-family: var(--font-mono); font-size: 12px; font-weight: 400; letter-spacing: 0; }
+.component-modal-head p { margin-top: 8px; color: var(--label-secondary); font-size: 13px; }
+.component-modal-inner > .component-stats { grid-template-columns: repeat(4, minmax(0, 1fr)); margin-top: 20px; padding: 16px; border: 1px solid rgba(255, 255, 255, .08); border-radius: 10px; background: rgba(255, 255, 255, .03); }
+.component-modal-inner > .component-stats b { font-size: 20px; }
+.component-modal-shops-head { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-top: 22px; }
+.component-modal-shops-head h4 { color: var(--label); font-size: 18px; line-height: 1.2; font-weight: 600; }
+.component-modal-shops-head span { color: var(--label-tertiary); font-size: 11px; }
+.component-modal-shops { display: grid; gap: 4px; max-height: 42vh; margin-top: 10px; overflow-y: auto; padding-right: 4px; }
+.component-modal-shops .component-shop-row { min-height: 48px; padding: 7px 9px; background: rgba(255, 255, 255, .032); }
+.component-modal-shops .component-shop-place b { color: var(--label); font-size: 12px; }
+.component-modal-shops .component-shop-place small { color: var(--label-secondary); font-size: 11px; }
+.component-modal-shops .component-shop-price b { font-size: 17px; }
+.component-modal-note { margin-top: 14px; color: var(--label-tertiary); font-size: 10px; line-height: 1.5; }
+
+@media (max-width: 1180px) {
+  .components-hero-grid { grid-template-columns: minmax(0, 1fr) minmax(380px, .9fr); gap: 30px; }
+  .component-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+.component-card-foot { align-items: flex-end; }
+.component-open { flex-shrink: 0; padding: 0; border: 0; background: transparent; color: var(--cyan); font-family: var(--font); font-size: 10px; line-height: 1.2; }
+.component-open:hover { color: var(--label); text-decoration: underline; }
+
+/* readability floor for functional component text */
+.component-type { font-size: 10px; }
+.component-maker { font-size: 13px; }
+.component-stats i { font-size: 11px; }
+.component-stats b { font-size: 17px; }
+.component-shop-place b { font-size: 12px; }
+.component-shop-place small { font-size: 11px; }
+.component-shop-price b { font-size: 16px; }
+.component-shop-price small { font-size: 9px; }
+.component-shop-more { font-size: 11px; }
+.component-card-foot { font-size: 11px; }
+.component-open { font-size: 11px; }
+.component-matrix-cell small { font-size: 10px; }
+.component-modal-note { font-size: 11px; }

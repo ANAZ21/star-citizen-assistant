@@ -16,6 +16,12 @@ const riskLabel = (danger) => ['安全', '低风险', '中风险', '高风险', 
 const weaponName = (weapon) => SC.weaponName ? SC.weaponName(weapon) : weapon.name;
 const weaponManu = (weapon) => SC.weaponManu ? SC.weaponManu(weapon) : weapon.manu;
 const shopName = (name) => SC.shopName ? SC.shopName(name) : name;
+const componentMeta = window.SC_COMPONENT_META || { types: {}, classes: {} };
+const componentTypes = componentMeta.types || {};
+const componentClasses = componentMeta.classes || {};
+const componentTypeLabel = (type) => (componentTypes[type] && componentTypes[type].label) || type;
+const componentClassLabel = (value) => componentClasses[value] || value || '';
+const componentOrder = { power: 0, shield: 1, cooler: 2, quantum: 3 };
 const isShop = (id) => !!(window.SC_SHOPS && SC_SHOPS.locations && SC_SHOPS.locations[id]);
 const shopBuy = (id) => isShop(id) && SC_SHOPS.locations[id].counts.buy > 0;
 const systemById = (id) => SC.systems.find((system) => system.id === id);
@@ -1193,6 +1199,9 @@ function stockPreview(shop, feature) {
     const more = shop.rent.length - Math.min(limit, shop.rent.length);
     if (names) lines.push(`<p class="place-stock-line rent"><span>租赁</span>${esc(names)}${more > 0 ? ` <em>+${more}</em>` : ''}</p>`);
   }
+  if (shop.components && shop.components.length) {
+    lines.push(`<p class="place-stock-line components"><span>配件</span>${shop.components.length} 件在售</p>`);
+  }
   return lines.join('');
 }
 
@@ -1224,7 +1233,7 @@ function cardMarkup(loc, index) {
       ${facilities ? `<div class="place-facilities">${facilities}</div>` : ''}
       ${stockPreview(shop, feature)}
       ${shipPreview(loc, shop)}
-      <div class="place-foot"><span>${shop ? '商店档案 · ' + shop.counts.buy + ' 艘在售' : esc(typeLabel(loc.type)) + '档案'}</span><span class="open">${shop ? '查看库存' : '查看地点'} →</span></div>
+      <div class="place-foot"><span>${shop ? (shop.counts.buy ? '商店档案 · ' + shop.counts.buy + ' 艘在售' : (shop.counts.components ? '配件档案 · ' + shop.counts.components + ' 件有售' : '商店档案')) : esc(typeLabel(loc.type)) + '档案'}</span><span class="open">${shop ? '查看库存' : '查看地点'} →</span></div>
     </div>
   </a>`;
 }
@@ -1276,13 +1285,59 @@ function updateCount() {
 }
 
 /* ---------- location dialog ---------- */
+function componentSpecs(entry) {
+  const stats = entry.stats || {};
+  const rows = [];
+  const add = (label, value, digits) => {
+    if (value == null || value === '') return;
+    rows.push(`<span><i>${label}</i><b>${Number(value).toLocaleString('en-US', { maximumFractionDigits: digits == null ? 1 : digits })}</b></span>`);
+  };
+  if (entry.type === 'power') {
+    add('出力', stats.output);
+    add('耐久', stats.durability);
+  } else if (entry.type === 'shield') {
+    add('护盾', stats.max, 0);
+    add('恢复 / 秒', stats.regen, 0);
+    add('功耗', stats.power);
+    add('耐久', stats.durability, 0);
+  } else if (entry.type === 'cooler') {
+    add('制冷', stats.rate);
+    add('功耗', stats.power);
+  } else if (entry.type === 'quantum') {
+    if (stats.speed != null) rows.push(`<span><i>速度</i><b>${fmt(Math.round(stats.speed / 1000))} km/s</b></span>`);
+    add('充能', stats.spool);
+    add('冷却', stats.cooldown);
+    add('燃料', stats.fuel);
+  }
+  return rows.slice(0, 4).join('');
+}
+
 function stockCard(entry, kind) {
-  if (kind === 'weapon') {
+  if (kind === 'weapon' || kind === 'weapons') {
     const type = SC.weaponType ? SC.weaponType(entry) : '';
+    const stats = SC.weaponStats ? SC.weaponStats(entry) : null;
+    const stat = (value, digits) => value == null ? '—' : Number(value).toLocaleString('en-US', { maximumFractionDigits: digits == null ? 1 : digits });
+    const range = stats && stats.range != null ? (stats.range / 1000).toFixed(1) + ' km' : '—';
     return `<article class="stock-card weapon">
       <div class="stock-card-head"><span class="stock-size">S${esc(entry.size || '—')}</span><span class="stock-kind">${esc(type)}</span></div>
       <b class="stock-name">${esc(weaponName(entry))}</b>
       <small class="stock-sub">${esc(weaponManu(entry))} · ${esc(shopName(entry.shop))}</small>
+      <div class="weapon-combat">
+        <span><i>DPS</i><b>${stat(stats && stats.dps)}</b></span>
+        <span><i>持续 DPS</i><b>${stat(stats && stats.sustained)}</b></span>
+        <span><i>射程</i><b>${range}</b></span>
+        <span><i>单发伤害</i><b>${stat(stats && stats.alpha)}</b></span>
+      </div>
+      <div class="stock-price">${fmt(entry.price)}<small>aUEC</small></div>
+    </article>`;
+  }
+  if (kind === 'component' || kind === 'components') {
+    const site = entry.site ? ` · ${entry.site}` : '';
+    return `<article class="stock-card component">
+      <div class="stock-card-head"><span class="stock-size">S${esc(entry.size == null ? '—' : entry.size)}</span><span class="stock-kind">${esc(componentTypeLabel(entry.type))}</span></div>
+      <b class="stock-name">${esc(entry.name)}</b>
+      <small class="stock-sub">${esc(SC.manuName ? SC.manuName(entry.manu) : entry.manu)} · ${esc(componentClassLabel(entry.itemClass))} · ${esc(entry.grade)} 级 · ${esc(shopName(entry.shop))}${esc(site)}</small>
+      <div class="stock-specs">${componentSpecs(entry)}</div>
       <div class="stock-price">${fmt(entry.price)}<small>aUEC</small></div>
     </article>`;
   }
@@ -1324,11 +1379,17 @@ function stockItems(shop, tab) {
   if (tab === 'ships') return shop.buy.slice().sort((a, b) => a.price - b.price);
   if (tab === 'weapons') return shop.weapons.slice().sort((a, b) => a.size - b.size || a.price - b.price);
   if (tab === 'rent') return shop.rent.slice().sort((a, b) => a.days[0] - b.days[0]);
+  if (tab === 'components') {
+    return (shop.components || []).slice().sort((a, b) =>
+      (componentOrder[a.type] || 0) - (componentOrder[b.type] || 0) ||
+      (a.size || 0) - (b.size || 0) ||
+      a.name.localeCompare(b.name));
+  }
   return [];
 }
 
 function stockSizeOf(entry, tab) {
-  if (tab === 'weapons') return entry.size;
+  if (tab === 'weapons' || tab === 'components') return entry.size;
   const ship = SC.shipById(entry.shipId);
   return ship ? ship.size : null;
 }
@@ -1339,9 +1400,9 @@ function renderStockTools(loc, tab) {
   const shop = SC_SHOPS.locations[loc.id];
   const items = stockItems(shop, tab);
   if (!items.length) { host.innerHTML = ''; return; }
-  const sizes = Array.from(new Set(items.map((entry) => stockSizeOf(entry, tab)).filter(Boolean))).sort();
+  const sizes = Array.from(new Set(items.map((entry) => stockSizeOf(entry, tab)).filter((value) => value != null))).sort((a, b) => a - b);
   const prices = items.map((entry) => tab === 'rent' ? entry.days[0] : entry.price);
-  const sizeLabel = (size) => tab === 'weapons' ? 'S' + size : (SC.sizes[size] || size);
+  const sizeLabel = (size) => tab === 'weapons' || tab === 'components' ? 'S' + size : (SC.sizes[size] || size);
   host.innerHTML = `<div class="stock-summary"><span>共 <b>${items.length}</b> 项</span><span>价格区间 <b>${fmt(Math.min.apply(null, prices))}</b> – <b>${fmt(Math.max.apply(null, prices))}</b> aUEC</span></div>
     <div class="weapon-sizes" role="group" aria-label="按尺寸筛选">
       <button type="button" class="${state.stockFilter === 'all' ? 'active' : ''}" data-stock-filter="all">全部 <small>${items.length}</small></button>
@@ -1421,6 +1482,7 @@ function renderDialog(loc) {
     ['ships', '飞船', shop.counts.buy],
     ['weapons', '武器', shop.counts.weapons],
     ['rent', '租赁', shop.counts.rent],
+    ['components', '配件', shop.counts.components || 0],
     ['packages', '套装', 1]
   ].filter(([, , n]) => n > 0) : [];
   state.tab = tabs.some(([key]) => key === state.tab) ? state.tab : (tabs[0] ? tabs[0][0] : 'ships');

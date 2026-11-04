@@ -530,3 +530,16 @@ body.drawer-open .atlas-focus { display: none; }
 .stock-pager button { min-height: 34px; padding: 0 14px; border: 1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.04); color: var(--label); font-size: 12px; }
 .stock-pager button:disabled { opacity: .35; }
 .stock-pager b { color: var(--label); font-size: 14px; }
+
+/* weapon DPS + component stock cards */
+.weapon-combat { display: grid; grid-template-columns: 1fr 1fr; gap: 7px 12px; margin: 12px 12px 0; padding-top: 10px; border-top: 1px solid rgba(255,255,255,.08); }
+.weapon-combat span { min-width: 0; }
+.weapon-combat i { display: block; color: var(--label-tertiary); font-size: 10px; font-style: normal; }
+.weapon-combat b { display: block; margin-top: 1px; color: var(--cyan); font-family: var(--font-num); font-size: 16px; line-height: 1.2; font-weight: 600; }
+.stock-card.weapon .weapon-combat { margin-bottom: 2px; }
+.stock-card.component { padding-bottom: 12px; }
+.stock-card.component .stock-name { padding: 10px 12px 0; white-space: normal; }
+.stock-card.component .stock-sub { padding: 2px 12px 0; white-space: normal; line-height: 1.45; }
+.stock-card.component .stock-specs { margin: 10px 12px 0; }
+.stock-card.component .stock-price { margin: auto 12px 0; padding-top: 12px; }
+.place-stock-line.components span { color: var(--orange); }
