@@ -2600,27 +2600,27 @@ body.starmap-open { overflow: hidden; }
 }
 
 /* ---------- readability pass: functional text floor ---------- */
-.maker { font-size: 12px; }
-.ship-name { font-size: 24px; line-height: 30px; }
-.ship-name .cn { font-size: 14px; line-height: 20px; }
-.badge { font-size: 12px; line-height: 15px; }
-.ship-blurb { font-size: 14px; line-height: 20px; }
-.quick-stats dt { font-size: 12px; line-height: 15px; }
-.quick-stats dd { font-size: 18px; line-height: 23px; }
-.ship-availability { font-size: 11px; }
-.price-row span { font-size: 12px; }
-.featured-copy small { font-size: 11px; }
-.featured-copy em { font-size: 13px; }
-.system-card-body > p { font-size: 14px; line-height: 20px; }
-.system-card-body h3 small { font-size: 12px; }
-.system-tags span { font-size: 12px; }
-.shop-kicker { font-size: 12px; }
-.shop-names { font-size: 13px; line-height: 19px; }
-.shop-counts { font-size: 13px; }
-.shop-open { font-size: 13px; }
-.ios-footer-brand p { font-size: 14px; line-height: 20px; }
-.ios-footer-col h4 { font-size: 12px; }
-.ios-footer-col a { font-size: 14px; line-height: 20px; }
-.gsc-head em { font-size: 11px; }
-.gsr-counts span { font-size: 10px; }
-.shop-row-price small, .rent-values, .rent-days { font-size: 10px; }
+.maker { font-size: 13px; }
+.ship-name { font-size: 26px; line-height: 32px; }
+.ship-name .cn { font-size: 15px; line-height: 21px; }
+.badge { font-size: 13px; line-height: 16px; }
+.ship-blurb { font-size: 15px; line-height: 21px; }
+.quick-stats dt { font-size: 13px; line-height: 16px; }
+.quick-stats dd { font-size: 20px; line-height: 25px; }
+.ship-availability { font-size: 12px; }
+.price-row span { font-size: 13px; }
+.featured-copy small { font-size: 12px; }
+.featured-copy em { font-size: 14px; }
+.system-card-body > p { font-size: 15px; line-height: 21px; }
+.system-card-body h3 small { font-size: 13px; }
+.system-tags span { font-size: 13px; }
+.shop-kicker { font-size: 13px; }
+.shop-names { font-size: 14px; line-height: 20px; }
+.shop-counts { font-size: 14px; }
+.shop-open { font-size: 14px; }
+.ios-footer-brand p { font-size: 15px; line-height: 21px; }
+.ios-footer-col h4 { font-size: 13px; }
+.ios-footer-col a { font-size: 15px; line-height: 21px; }
+.gsc-head em { font-size: 12px; }
+.gsr-counts span { font-size: 11px; }
+.shop-row-price small, .rent-values, .rent-days { font-size: 11px; }

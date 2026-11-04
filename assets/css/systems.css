@@ -266,9 +266,9 @@ body[data-page="systems"] .app-main { padding-bottom: 0; }
 .place-type-chip { position: absolute; z-index: 2; top: 11px; left: 12px; padding: 3px 6px; border: 1px solid rgba(255,255,255,.16); background: rgba(3,5,7,.6); color: var(--label-secondary); font-family: var(--font-mono); font-size: 7px; letter-spacing: .08em; }
 .place-type-chip.risk-d3, .place-type-chip.risk-d4 { border-color: rgba(255,159,10,.38); color: var(--orange); }
 .place-code { position: absolute; z-index: 2; top: 11px; right: 12px; color: rgba(255,255,255,.38); font-family: var(--font-mono); font-size: 7px; letter-spacing: .08em; }
-.place-visual-title { position: absolute; z-index: 2; left: 13px; right: 88px; bottom: 11px; }
+.place-visual-title { position: absolute; z-index: 2; left: 13px; right: 104px; bottom: 11px; }
 .place-visual-title h3 { font-family: var(--font); font-size: 24px; line-height: 1.05; font-weight: 600; letter-spacing: -.03em; }
-.place-card.feature .place-visual-title { right: 120px; }
+.place-card.feature .place-visual-title { right: 136px; }
 .place-card.feature .place-visual-title h3 { font-size: 40px; letter-spacing: -.04em; }
 .place-card.no-shop .place-visual-title { right: 13px; }
 .place-card.no-shop .place-visual-title h3 { font-size: 21px; }
@@ -426,55 +426,55 @@ body.atlas-fullscreen .app-main { animation: none; transform: none; }
 
 /* ---------- readability pass: functional text floor ---------- */
 .atlas-head-meta { font-size: 11px; }
-.atlas-tabs button b { font-size: 13px; }
-.atlas-tabs button small { font-size: 10px; }
-.atlas-legend { font-size: 11px; }
-.atlas-hint { font-size: 11px; }
+.atlas-tabs button b { font-size: 14px; }
+.atlas-tabs button small { font-size: 11px; }
+.atlas-legend { font-size: 12px; }
+.atlas-hint { font-size: 12px; }
 .atlas-node-label b { font-size: 14px; }
 .atlas-node-label small { font-size: 10px; }
 .atlas-focus-copy span { font-size: 9px; }
-.atlas-focus-copy small { font-size: 11px; }
-.atlas-focus-stats span { font-size: 11px; }
-.atlas-focus-stats b { font-size: 15px; }
-.atlas-focus-sites button b { font-size: 12px; }
-.atlas-focus-sites button small { font-size: 10px; }
-.atlas-focus-sites button em { font-size: 10px; }
-.atlas-focus-note { font-size: 11px; }
-.atlas-focus-actions button { min-height: 34px; font-size: 11px; }
-.atlas-legend-text { font-size: 10px; }
-.atlas-tools .wide { font-size: 11px; }
-.atlas-loading small { font-size: 9px; }
-.location-filters button { min-height: 30px; font-size: 11px; }
-.place-type-chip { font-size: 10px; }
-.place-code { font-size: 10px; }
-.place-visual-title p { font-size: 10px; }
-.place-counts span { font-size: 11px; }
-.place-tagline { font-size: 12px; line-height: 1.6; }
-.place-card.feature .place-tagline { font-size: 13px; }
-.place-facilities span { font-size: 10px; }
-.place-stock-line { font-size: 11px; }
-.place-stock-line span { font-size: 10px; }
-.place-stock-line em { font-size: 10px; }
-.place-foot { font-size: 10px; }
-.place-foot .open { font-size: 11px; }
-.dialog-kicker { font-size: 11px; }
-.dialog-zh { font-size: 12px; }
-.dialog-story p { font-size: 15px; line-height: 1.85; }
-.dialog-side h4 { font-size: 11px; }
-.dialog-facts b { font-size: 20px; }
-.dialog-facts small { font-size: 11px; }
-.dialog-services span { font-size: 11px; }
-.dialog-stock-tabs button { min-height: 30px; font-size: 12px; }
-.dialog-stock-tabs small { font-size: 10px; }
-.stock-summary { font-size: 11px; }
-.weapon-sizes button { min-height: 28px; font-size: 11px; }
-.weapon-sizes small { font-size: 9px; }
-.dialog-stock-row { min-height: 56px; }
-.dialog-stock-row .name b { font-size: 14px; }
-.dialog-stock-row .name small { font-size: 11px; }
-.dialog-stock-row .value { font-size: 16px; }
-.dialog-stock-row .value small { font-size: 10px; }
-.dialog-stock-row .size { width: 30px; height: 30px; font-size: 13px; }
-.dialog-note { font-size: 10px; }
+.atlas-focus-copy small { font-size: 13px; }
+.atlas-focus-stats span { font-size: 12px; }
+.atlas-focus-stats b { font-size: 17px; }
+.atlas-focus-sites button b { font-size: 14px; }
+.atlas-focus-sites button small { font-size: 11px; }
+.atlas-focus-sites button em { font-size: 11px; }
+.atlas-focus-note { font-size: 12px; }
+.atlas-focus-actions button { min-height: 36px; font-size: 12px; }
+.atlas-legend-text { font-size: 11px; }
+.atlas-tools .wide { font-size: 12px; }
+.atlas-loading small { font-size: 10px; }
+.location-filters button { min-height: 32px; font-size: 12px; }
+.place-type-chip { font-size: 11px; }
+.place-code { font-size: 11px; }
+.place-visual-title p { font-size: 11px; }
+.place-counts span { font-size: 12px; }
+.place-tagline { font-size: 13px; line-height: 1.65; }
+.place-card.feature .place-tagline { font-size: 14px; }
+.place-facilities span { font-size: 11px; }
+.place-stock-line { font-size: 12px; }
+.place-stock-line span { font-size: 11px; }
+.place-stock-line em { font-size: 11px; }
+.place-foot { font-size: 11px; }
+.place-foot .open { font-size: 12px; }
+.dialog-kicker { font-size: 12px; }
+.dialog-zh { font-size: 13px; }
+.dialog-story p { font-size: 16px; line-height: 1.9; }
+.dialog-side h4 { font-size: 12px; }
+.dialog-facts b { font-size: 22px; }
+.dialog-facts small { font-size: 12px; }
+.dialog-services span { font-size: 12px; }
+.dialog-stock-tabs button { min-height: 32px; font-size: 13px; }
+.dialog-stock-tabs small { font-size: 11px; }
+.stock-summary { font-size: 12px; }
+.weapon-sizes button { min-height: 30px; font-size: 12px; }
+.weapon-sizes small { font-size: 10px; }
+.dialog-stock-row { min-height: 62px; }
+.dialog-stock-row .name b { font-size: 16px; }
+.dialog-stock-row .name small { font-size: 12px; }
+.dialog-stock-row .value { font-size: 18px; }
+.dialog-stock-row .value small { font-size: 11px; }
+.dialog-stock-row .size { width: 32px; height: 32px; font-size: 14px; }
+.dialog-note { font-size: 11px; }
 .location-dialog { width: min(1120px, calc(100vw - 80px)); }
 .dialog-body { grid-template-columns: minmax(0, 1fr) 300px; }
