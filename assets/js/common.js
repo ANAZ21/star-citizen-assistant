@@ -250,7 +250,7 @@
     location: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s7-5.2 7-11a7 7 0 10-14 0c0 5.8 7 11 7 11z"/><circle cx="12" cy="10" r="2.4"/></svg>'
   };
 
-  var PAGE_TITLES = { home: '总览', ships: '飞船数据库', systems: '星系与商店', guide: '新手指南' };
+  var PAGE_TITLES = { home: '总览', ships: '飞船数据库', systems: '星系与商店' };
   var PAGE_KICKERS = { home: 'HOME', ships: 'SHIPS', systems: 'SYSTEMS', guide: 'GUIDE' };
 
   function brandMark() {
@@ -269,8 +269,7 @@
     var links = [
       { id: 'home', href: 'index.html', label: '总览' },
       { id: 'ships', href: 'ships.html', label: '飞船' },
-      { id: 'systems', href: 'systems.html', label: '星系' },
-      { id: 'guide', href: 'guide.html', label: '指南' }
+      { id: 'systems', href: 'systems.html', label: '星系' }
     ];
     var nav = links.map(function (l) {
       return '<a href="' + l.href + '" class="ios-nav-link' + (page === l.id ? ' active' : '') + '">' + l.label + '</a>';
@@ -301,14 +300,13 @@
       '<div class="ios-footer-inner">' +
         '<div class="ios-footer-brand">' +
           '<a class="ios-brand" href="index.html">' + brandMark() + '<span class="ios-brand-name">MOBIGLAS</span></a>' +
-          '<p>飞船价格、性能参数、星系航图与落脚点情报。非官方粉丝站点，与 Cloud Imperium Games 无隶属或合作关系。</p>' +
+          '<p>飞船价格、性能参数、星系航图与地点设施资料。非官方粉丝站点，与 Cloud Imperium Games 无隶属或合作关系。</p>' +
         '</div>' +
         '<div class="ios-footer-col">' +
           '<h4>数据库</h4>' +
           '<a href="ships.html">飞船档案</a>' +
           '<a href="systems.html">星系与地点</a>' +
-          '<a href="guide.html">新手指南</a>' +
-          '<a href="guide.html#shops">商店速查</a>' +
+          '<a href="systems.html#locations">地点库存</a>' +
         '</div>' +
         '<div class="ios-footer-col">' +
           '<h4>参考</h4>' +
@@ -320,7 +318,6 @@
       '</div>' +
       '<div class="ios-footer-bottom">' +
         '<span>© 2026 MOBIGLAS · 玩家制作的资料站</span>' +
-        '<span><a href="guide.html#credits">图片来源与版权</a></span>' +
       '</div>';
   }
 

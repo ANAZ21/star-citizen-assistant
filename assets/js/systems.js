@@ -20,6 +20,7 @@ const isShop = (id) => !!(window.SC_SHOPS && SC_SHOPS.locations && SC_SHOPS.loca
 const shopBuy = (id) => isShop(id) && SC_SHOPS.locations[id].counts.buy > 0;
 const systemById = (id) => SC.systems.find((system) => system.id === id);
 const storyFor = (loc) => (window.SC_STORIES && SC_STORIES[loc.id]) || null;
+const locationMedia = (loc) => (window.SC_LOCATION_MEDIA && SC_LOCATION_MEDIA[loc.id]) || null;
 
 const PLANET_TEXTURES = {
   hurston: 'assets/img/planets/hurston-surface.webp',
@@ -33,6 +34,9 @@ const PLANET_TEXTURES = {
   fuego: 'assets/img/planets/fuego.webp',
   terminus: 'assets/img/planets/terminus.webp'
 };
+
+const MOON_TEXTURES = window.SC_MOON_TEXTURES || {};
+const PLANET_DETAIL = window.SC_PLANET_DETAIL || {};
 
 const state = {
   system: 'stanton',
@@ -54,6 +58,8 @@ const atlasState = {
   selected: null,
   hover: null,
   focus: null,
+  tween: null,
+  detailId: null,
   target: new THREE.Vector3(),
   targetGoal: new THREE.Vector3(),
   layout: null,
@@ -68,6 +74,8 @@ let starField = null;
 let labelLayer = null;
 let atlasLoading = null;
 let textures = {};
+let detailTextures = {};
+let cityIconTexture = null;
 let raycaster = null;
 let pointer = new THREE.Vector2();
 let atlasW = 1;
@@ -91,6 +99,26 @@ function markerIcon(type) {
   if (type === 'jump') return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="7"/><path d="M12 3v4M12 17v4M3 12h4M17 12h4"/></svg>';
   if (type === 'moon') return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="6"/><path d="M15.5 9.5a3 3 0 0 0 3-3"/></svg>';
   return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1" fill="currentColor" stroke="none"/></svg>';
+}
+
+function makeCityIconTexture() {
+  const canvas = document.createElement('canvas');
+  canvas.width = 128; canvas.height = 128;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, 128, 128);
+  ctx.strokeStyle = '#ffb347';
+  ctx.fillStyle = 'rgba(255,159,10,.16)';
+  ctx.lineWidth = 4;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  const bars = [[28, 82, 16, 30], [50, 62, 16, 50], [72, 74, 16, 38], [94, 52, 14, 60]];
+  bars.forEach(([x, y, w, h]) => { ctx.fillRect(x, y, w, h); ctx.strokeRect(x, y, w, h); });
+  ctx.beginPath();
+  ctx.moveTo(22, 112); ctx.lineTo(110, 112);
+  ctx.stroke();
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  return texture;
 }
 
 /* ---------- data / layout ---------- */
@@ -154,7 +182,7 @@ function layoutSystem(systemId) {
     if (!host) return;
     const angle = Math.atan2((loc.mapY || parent.mapY) - parent.mapY, (loc.mapX || parent.mapX) - parent.mapX);
     const dir = new THREE.Vector3(Math.cos(angle), 0, Math.sin(angle));
-    const surface = host.position.clone().add(dir.multiplyScalar(host.radius * 1.015));
+    const surface = host.position.clone().add(dir.multiplyScalar(host.radius * 1.04));
     const surfaceNode = add(loc, surface.x, surface.y, surface.z, {
       radius: 0.22, color: shopBuy(loc.id) ? '#ff9f0a' : '#aebbc5',
       priority: 2,
@@ -259,6 +287,8 @@ function disposeGroup(group) {
 }
 
 function buildSystem(systemId) {
+  restorePlanetDetail();
+  atlasState.tween = null;
   if (systemGroup) {
     scene.remove(systemGroup);
     disposeGroup(systemGroup);
@@ -271,6 +301,7 @@ function buildSystem(systemId) {
   scene.add(systemGroup);
 
   const glowTexture = makeGlowTexture();
+  if (!cityIconTexture) cityIconTexture = makeCityIconTexture();
   const star = new THREE.Mesh(new THREE.SphereGeometry(2.3, 32, 24), new THREE.MeshBasicMaterial({ color: 0xfff1c9 }));
   systemGroup.add(star);
   const starGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture, color: 0xffc26e, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0.78 }));
@@ -299,6 +330,7 @@ function buildSystem(systemId) {
         new THREE.SphereGeometry(node.radius, 64, 40),
         new THREE.MeshStandardMaterial({ map: texture || null, color: texture ? 0xffffff : 0x8997a3, roughness: 0.86, metalness: 0.02, emissive: new THREE.Color(0x0a0806) })
       );
+      node.baseMap = texture || null;
       const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture, color: 0x9cc9dd, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0.14 }));
       glow.scale.set(node.radius * 5.5, node.radius * 5.5, 1);
       glow.position.copy(node.position);
@@ -324,7 +356,14 @@ function buildSystem(systemId) {
         systemGroup.add(ring);
       }
     } else if (loc.type === 'moon') {
-      mesh = new THREE.Mesh(new THREE.SphereGeometry(node.radius, 20, 14), new THREE.MeshStandardMaterial({ color: 0x8997a3, roughness: 1 }));
+      const texture = textures[loc.id];
+      mesh = new THREE.Mesh(
+        new THREE.SphereGeometry(node.radius, 32, 20),
+        new THREE.MeshStandardMaterial({ map: texture || null, color: texture ? 0xffffff : 0x8997a3, roughness: 1 })
+      );
+    } else if (loc.type === 'landing') {
+      mesh = new THREE.Sprite(new THREE.SpriteMaterial({ map: cityIconTexture, color: 0xffffff, transparent: true, depthWrite: false, depthTest: true }));
+      mesh.scale.set(0.72, 0.72, 1);
     } else {
       mesh = new THREE.Mesh(new THREE.SphereGeometry(node.radius, 12, 10), new THREE.MeshBasicMaterial({ color: node.color }));
     }
@@ -450,6 +489,91 @@ function zoomRange() {
   return { min: 44, max: 150 };
 }
 
+function easeInOutCubic(t) {
+  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+}
+
+function startCameraTween(to, duration) {
+  atlasState.tween = {
+    start: performance.now() / 1000,
+    duration,
+    from: {
+      yaw: atlasState.yaw,
+      pitch: atlasState.pitch,
+      distance: atlasState.distance,
+      target: atlasState.target.clone()
+    },
+    to: {
+      yaw: to.yaw,
+      pitch: to.pitch,
+      distance: to.distance,
+      target: to.target.clone()
+    }
+  };
+  atlasState.yawGoal = to.yaw;
+  atlasState.pitchGoal = to.pitch;
+  atlasState.distanceGoal = to.distance;
+  atlasState.targetGoal.copy(to.target);
+}
+
+function focusView(node, yaw) {
+  const aspect = atlasW / atlasH;
+  const vFov = (camera.fov * Math.PI) / 180;
+  const hFov = 2 * Math.atan(Math.tan(vFov / 2) * aspect);
+  const diameterFraction = 0.54;
+  const distance = Math.max(node.radius * 2.2, node.radius / Math.tan((diameterFraction * hFov) / 2));
+  const shift = 0.21 * 2 * distance * Math.tan(hFov / 2);
+  const useYaw = yaw == null ? atlasState.yaw : yaw;
+  const right = new THREE.Vector3(Math.cos(useYaw), 0, -Math.sin(useYaw));
+  return {
+    target: node.position.clone().add(right.multiplyScalar(shift)),
+    distance,
+    yaw: useYaw,
+    pitch: atlasState.pitch
+  };
+}
+
+function restorePlanetDetail() {
+  const id = atlasState.detailId;
+  if (!id) return;
+  const node = atlasState.layout && atlasState.layout.positions[id];
+  if (node && node.mesh && node.mesh.material) {
+    node.mesh.material.map = node.baseMap;
+    node.mesh.material.needsUpdate = true;
+  }
+  if (detailTextures[id]) {
+    detailTextures[id].dispose();
+    delete detailTextures[id];
+  }
+  atlasState.detailId = null;
+}
+
+function applyPlanetDetail(id) {
+  if (atlasState.focus !== id) return;
+  const node = atlasState.layout && atlasState.layout.positions[id];
+  const texture = detailTextures[id];
+  if (!node || !node.mesh || !texture) return;
+  if (atlasState.detailId && atlasState.detailId !== id) restorePlanetDetail();
+  node.mesh.material.map = texture;
+  node.mesh.material.needsUpdate = true;
+  atlasState.detailId = id;
+}
+
+function loadPlanetDetail(id) {
+  const src = PLANET_DETAIL[id];
+  if (!src) return;
+  if (detailTextures[id]) {
+    setTimeout(() => applyPlanetDetail(id), 900);
+    return;
+  }
+  new THREE.TextureLoader().load(src, (texture) => {
+    texture.colorSpace = THREE.SRGBColorSpace;
+    texture.anisotropy = renderer ? renderer.capabilities.getMaxAnisotropy() : 1;
+    detailTextures[id] = texture;
+    setTimeout(() => applyPlanetDetail(id), 900);
+  });
+}
+
 function focusPlanet(id) {
   const node = atlasState.layout && atlasState.layout.positions[id];
   const loc = SC.locationById(id);
@@ -457,13 +581,14 @@ function focusPlanet(id) {
   atlasState.focus = id;
   atlasState.selected = id;
   atlasState.hover = null;
-  atlasState.targetGoal.copy(node.position);
-  atlasState.distanceGoal = Math.max(11, node.radius * 4.8);
+  const view = focusView(node);
   atlasState.auto = false;
   updateAutoButton();
   updateFocusHud();
   updateLabelVisibility();
   updateLabelPositions();
+  startCameraTween(view, 1.65);
+  loadPlanetDetail(id);
   const stage = $('#atlas-stage');
   if (stage) stage.classList.add('is-focused');
   const hint = $('#atlas-hint');
@@ -471,14 +596,14 @@ function focusPlanet(id) {
 }
 
 function leaveFocus() {
+  restorePlanetDetail();
   atlasState.focus = null;
   atlasState.selected = null; atlasState.hover = null;
-  atlasState.targetGoal.set(0, 0, 0);
-  atlasState.distanceGoal = 112;
   atlasState.auto = true;
   updateAutoButton();
   updateFocusHud();
   updateLabelVisibility();
+  startCameraTween({ target: new THREE.Vector3(0, 0, 0), distance: 112, yaw: atlasState.yaw, pitch: atlasState.pitch }, 1.15);
   const stage = $('#atlas-stage');
   if (stage) stage.classList.remove('is-focused');
   const hint = $('#atlas-hint');
@@ -546,6 +671,7 @@ function bindAtlas() {
   canvas.style.cursor = 'grab';
   canvas.addEventListener('pointerdown', (event) => {
     if (event.button !== 0) return;
+    atlasState.tween = null;
     atlasState.dragging = { x: event.clientX, y: event.clientY, yaw: atlasState.yaw, pitch: atlasState.pitch, moved: false, captured: false };
     if (atlasState.focus) updateLabelVisibility();
   });
@@ -571,6 +697,10 @@ function bindAtlas() {
     atlasState.yawGoal = atlasState.dragging.yaw - dx * 0.005;
     atlasState.pitchGoal = Math.max(-0.12, Math.min(0.95, atlasState.dragging.pitch + dy * 0.004));
     atlasState.auto = false;
+    if (atlasState.focus && atlasState.layout) {
+      const node = atlasState.layout.positions[atlasState.focus];
+      if (node) atlasState.targetGoal.copy(focusView(node, atlasState.yawGoal).target);
+    }
     updateAutoButton();
   });
   canvas.addEventListener('pointerleave', () => {
@@ -596,6 +726,7 @@ function bindAtlas() {
   canvas.addEventListener('pointercancel', end);
   canvas.addEventListener('wheel', (event) => {
     event.preventDefault();
+    atlasState.tween = null;
     const range = zoomRange();
     atlasState.distanceGoal = Math.max(range.min, Math.min(range.max, atlasState.distanceGoal * (event.deltaY < 0 ? 0.9 : 1.1)));
     atlasState.auto = false;
@@ -614,11 +745,14 @@ function bindAtlas() {
   $$('[data-atlas-action]').forEach((button) => {
     button.addEventListener('click', () => {
       const action = button.dataset.atlasAction;
+      if (action === 'zoom-in' || action === 'zoom-out') atlasState.tween = null;
       const range = zoomRange();
       if (action === 'zoom-in') atlasState.distanceGoal = Math.max(range.min, atlasState.distanceGoal * 0.84);
       if (action === 'zoom-out') atlasState.distanceGoal = Math.min(range.max, atlasState.distanceGoal * 1.18);
       if (action === 'auto') { atlasState.auto = !atlasState.auto; updateAutoButton(); }
       if (action === 'reset') {
+        restorePlanetDetail();
+        atlasState.tween = null;
         atlasState.yawGoal = 0.35; atlasState.pitchGoal = 0.48; atlasState.distanceGoal = 112;
         atlasState.focus = null; atlasState.selected = null; atlasState.hover = null; atlasState.targetGoal.set(0, 0, 0);
         atlasState.auto = true; updateAutoButton(); updateFocusHud();
@@ -657,10 +791,21 @@ function animate(t) {
   lastFrame = now;
   elapsed += delta;
   if (texturesReady && atlasState.auto && !atlasState.dragging) atlasState.yawGoal += delta * 0.012;
-  atlasState.yaw = lerp(atlasState.yaw, atlasState.yawGoal, 0.06);
-  atlasState.pitch = lerp(atlasState.pitch, atlasState.pitchGoal, 0.06);
-  atlasState.distance = lerp(atlasState.distance, atlasState.distanceGoal, 0.06);
-  atlasState.target.lerp(atlasState.targetGoal, 0.07);
+  if (atlasState.tween) {
+    const tw = atlasState.tween;
+    const k = Math.min(1, (now - tw.start) / tw.duration);
+    const e = easeInOutCubic(k);
+    atlasState.yaw = lerp(tw.from.yaw, tw.to.yaw, e);
+    atlasState.pitch = lerp(tw.from.pitch, tw.to.pitch, e);
+    atlasState.distance = lerp(tw.from.distance, tw.to.distance, e);
+    atlasState.target.copy(tw.from.target).lerp(tw.to.target, e);
+    if (k >= 1) atlasState.tween = null;
+  } else {
+    atlasState.yaw = lerp(atlasState.yaw, atlasState.yawGoal, 0.06);
+    atlasState.pitch = lerp(atlasState.pitch, atlasState.pitchGoal, 0.06);
+    atlasState.distance = lerp(atlasState.distance, atlasState.distanceGoal, 0.06);
+    atlasState.target.lerp(atlasState.targetGoal, 0.07);
+  }
   const r = atlasState.distance;
   const p = atlasState.pitch;
   camera.position.set(
@@ -743,7 +888,7 @@ function initAtlas() {
     if (els.loading) els.loading.innerHTML = '<b>ATLAS TEXTURE ERROR</b><small>无法载入行星贴图</small>';
   };
   const loader = new THREE.TextureLoader(manager);
-  Object.entries(PLANET_TEXTURES).forEach(([id, src]) => {
+  Object.entries({ ...PLANET_TEXTURES, ...MOON_TEXTURES }).forEach(([id, src]) => {
     const texture = loader.load(src);
     texture.colorSpace = THREE.SRGBColorSpace;
     texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
@@ -865,6 +1010,7 @@ function stockPreview(shop, feature) {
 function cardMarkup(loc, index) {
   const shop = SC_SHOPS.locations[loc.id];
   const story = storyFor(loc);
+  const media = locationMedia(loc);
   const feature = loc.type === 'landing' || ['checkmate', 'ruin', 'orbituary'].includes(loc.id);
   const tagline = story ? (feature ? story.story[0] : story.tagline) : SC.zhText(loc.desc);
   const countItems = shop ? [['buy', '飞船'], ['weapons', '武器'], ['rent', '租赁']].filter(([key]) => shop.counts[key] > 0) : [];
@@ -873,9 +1019,12 @@ function cardMarkup(loc, index) {
     : '';
   const facilities = (loc.services || []).slice(0, 4).map((service) => `<span>${esc(SC.serviceName ? SC.serviceName(service) : service)}</span>`).join('');
   const risk = riskLabel(loc.danger);
-  return `<a class="place-card${feature ? ' feature' : ''}${!shop ? ' no-shop' : ''}" href="systems.html?loc=${esc(loc.id)}" data-loc="${esc(loc.id)}">
+  const visual = media
+    ? `<img class="place-visual-media" src="${esc(media.card)}" alt="${esc(zhName(loc))} 实景" loading="lazy" decoding="async">`
+    : `<div class="place-visual-art">${locationArt(loc)}</div>`;
+  return `<a class="place-card reveal${feature ? ' feature' : ''}${!shop ? ' no-shop' : ''}" href="systems.html?loc=${esc(loc.id)}" data-loc="${esc(loc.id)}" style="--i:${index % 6}">
     <div class="place-visual">
-      <div class="place-visual-art">${locationArt(loc)}</div>
+      ${visual}
       <span class="place-type-chip${risk ? ' risk-d' + loc.danger : ''}">${esc(typeLabel(loc.type))}${risk ? ' · ' + esc(risk) : ''}</span>
       <span class="place-code">${String(index + 1).padStart(2, '0')}</span>
       <div class="place-visual-title"><h3>${esc(zhName(loc))}</h3><p>${esc(loc.name)} · ${esc(parentLabel(loc))}</p></div>
@@ -899,6 +1048,7 @@ function renderCards() {
     return;
   }
   els.grid.innerHTML = locations.map(cardMarkup).join('');
+  if (typeof SC.refreshReveal === 'function') SC.refreshReveal();
 }
 
 function switchSystem(id, updateUrl) {
@@ -906,6 +1056,8 @@ function switchSystem(id, updateUrl) {
   state.system = id;
   state.filter = 'all';
   atlasState.selected = null; atlasState.hover = null;
+  restorePlanetDetail();
+  atlasState.tween = null;
   $$('[data-system]', els.tabs).forEach((button) => button.classList.toggle('active', button.dataset.system === id));
   if (renderer && texturesReady) buildSystem(id);
   atlasState.focus = null;
@@ -1017,6 +1169,7 @@ function renderDialog(loc) {
   const shell = $('#location-dialog-shell');
   if (!shell) return;
   const shop = SC_SHOPS.locations[loc.id];
+  const media = locationMedia(loc);
   const story = storyFor(loc);
   const storyText = story ? story.story : [SC.zhText(loc.desc)];
   const danger = riskLabel(loc.danger);
@@ -1028,8 +1181,8 @@ function renderDialog(loc) {
   ].filter(([, , n]) => n > 0) : [];
   state.tab = tabs.some(([key]) => key === state.tab) ? state.tab : (tabs[0] ? tabs[0][0] : 'ships');
   shell.innerHTML = `
-    <header class="dialog-hero">
-      <div class="dialog-art">${locationArt(loc, true)}</div>
+    <header class="dialog-hero${media ? ' has-media' : ''}">
+      ${media ? `<img class="dialog-hero-img" src="${esc(media.card)}" alt="${esc(zhName(loc))} 实景" decoding="async">` : `<div class="dialog-art">${locationArt(loc, true)}</div>`}
       <button class="dialog-close" type="button" data-dialog-close aria-label="关闭地点档案">×</button>
       <div class="dialog-kicker"><span>${esc((systemById(loc.system) || {}).en || '')} // ${esc(typeLabel(loc.type))}</span><span>${esc(loc.id.toUpperCase())}</span></div>
       <h2 class="dialog-title">${esc(zhName(loc))}</h2>
@@ -1141,7 +1294,13 @@ function init() {
       renderFilters();
       renderCards();
     }
-    setTimeout(() => openLocation(loc.id, false), 80);
+    setTimeout(() => {
+      const target = els.grid && els.grid.querySelector(`[data-loc="${loc.id}"]`);
+      if (!target) return;
+      target.classList.add('is-target');
+      target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setTimeout(() => target.classList.remove('is-target'), 4500);
+    }, 120);
   }
 }
 
