@@ -423,3 +423,58 @@ body.atlas-fullscreen .app-main { animation: none; transform: none; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
+
+/* ---------- readability pass: functional text floor ---------- */
+.atlas-head-meta { font-size: 11px; }
+.atlas-tabs button b { font-size: 13px; }
+.atlas-tabs button small { font-size: 10px; }
+.atlas-legend { font-size: 11px; }
+.atlas-hint { font-size: 11px; }
+.atlas-node-label b { font-size: 14px; }
+.atlas-node-label small { font-size: 10px; }
+.atlas-focus-copy span { font-size: 9px; }
+.atlas-focus-copy small { font-size: 11px; }
+.atlas-focus-stats span { font-size: 11px; }
+.atlas-focus-stats b { font-size: 15px; }
+.atlas-focus-sites button b { font-size: 12px; }
+.atlas-focus-sites button small { font-size: 10px; }
+.atlas-focus-sites button em { font-size: 10px; }
+.atlas-focus-note { font-size: 11px; }
+.atlas-focus-actions button { min-height: 34px; font-size: 11px; }
+.atlas-legend-text { font-size: 10px; }
+.atlas-tools .wide { font-size: 11px; }
+.atlas-loading small { font-size: 9px; }
+.location-filters button { min-height: 30px; font-size: 11px; }
+.place-type-chip { font-size: 10px; }
+.place-code { font-size: 10px; }
+.place-visual-title p { font-size: 10px; }
+.place-counts span { font-size: 11px; }
+.place-tagline { font-size: 12px; line-height: 1.6; }
+.place-card.feature .place-tagline { font-size: 13px; }
+.place-facilities span { font-size: 10px; }
+.place-stock-line { font-size: 11px; }
+.place-stock-line span { font-size: 10px; }
+.place-stock-line em { font-size: 10px; }
+.place-foot { font-size: 10px; }
+.place-foot .open { font-size: 11px; }
+.dialog-kicker { font-size: 11px; }
+.dialog-zh { font-size: 12px; }
+.dialog-story p { font-size: 15px; line-height: 1.85; }
+.dialog-side h4 { font-size: 11px; }
+.dialog-facts b { font-size: 20px; }
+.dialog-facts small { font-size: 11px; }
+.dialog-services span { font-size: 11px; }
+.dialog-stock-tabs button { min-height: 30px; font-size: 12px; }
+.dialog-stock-tabs small { font-size: 10px; }
+.stock-summary { font-size: 11px; }
+.weapon-sizes button { min-height: 28px; font-size: 11px; }
+.weapon-sizes small { font-size: 9px; }
+.dialog-stock-row { min-height: 56px; }
+.dialog-stock-row .name b { font-size: 14px; }
+.dialog-stock-row .name small { font-size: 11px; }
+.dialog-stock-row .value { font-size: 16px; }
+.dialog-stock-row .value small { font-size: 10px; }
+.dialog-stock-row .size { width: 30px; height: 30px; font-size: 13px; }
+.dialog-note { font-size: 10px; }
+.location-dialog { width: min(1120px, calc(100vw - 80px)); }
+.dialog-body { grid-template-columns: minmax(0, 1fr) 300px; }
