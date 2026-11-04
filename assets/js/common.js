@@ -92,7 +92,7 @@
     for (var i = 0; i < types.length; i++) {
       if (name.indexOf(types[i]) !== -1) return types[i];
     }
-    return '舰载武器';
+    return '飞船武器';
   };
 
   var weaponStatsLookup = null;
@@ -322,7 +322,7 @@
           '<a href="ships.html">飞船档案</a>' +
           '<a href="components.html">飞船配件</a>' +
           '<a href="systems.html">星系与地点</a>' +
-          '<a href="systems.html#locations">地点库存</a>' +
+          '<a href="systems.html#locations">地点商店</a>' +
         '</div>' +
         '<div class="ios-footer-col">' +
           '<h4>参考</h4>' +
@@ -607,6 +607,128 @@
 
 
   /* 卡片轻微 3D 倾斜与光斑跟随 */
+  /* ---------- 暗色下拉框（统一向下展开） ---------- */
+  var customSelects = [];
+
+  function closeCustomSelects(except) {
+    customSelects.forEach(function (item) {
+      if (item.wrap !== except) item.close();
+    });
+  }
+
+  SC.syncSelects = function () {
+    customSelects.forEach(function (item) { item.sync(); });
+  };
+
+  SC.enhanceSelects = function (scope) {
+    SC.$$('select.filter-select', scope || document).forEach(function (select) {
+      if (select.__scSelect) return;
+      select.__scSelect = true;
+      var wrap = document.createElement('div');
+      wrap.className = 'sc-select';
+      select.parentNode.insertBefore(wrap, select);
+      wrap.appendChild(select);
+      select.classList.add('sc-select-native');
+      select.setAttribute('tabindex', '-1');
+
+      var button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'sc-select-button filter-select';
+      button.setAttribute('aria-haspopup', 'listbox');
+      button.setAttribute('aria-expanded', 'false');
+      button.setAttribute('aria-label', select.getAttribute('aria-label') || '选择');
+
+      var menu = document.createElement('div');
+      menu.className = 'sc-select-menu';
+      menu.setAttribute('role', 'listbox');
+      menu.hidden = true;
+      wrap.appendChild(button);
+      wrap.appendChild(menu);
+
+      function selectedLabel() {
+        var option = select.options[select.selectedIndex];
+        return option ? option.textContent : '选择';
+      }
+      function renderMenu() {
+        menu.innerHTML = Array.prototype.map.call(select.options, function (option, index) {
+          return '<button type="button" role="option" class="sc-select-option' + (option.selected ? ' active' : '') + '" data-index="' + index + '" aria-selected="' + (option.selected ? 'true' : 'false') + '">' + SC.escapeHtml(option.textContent) + '</button>';
+        }).join('');
+      }
+      function sync() {
+        button.textContent = selectedLabel();
+        button.setAttribute('aria-expanded', menu.hidden ? 'false' : 'true');
+        renderMenu();
+      }
+      function close() {
+        menu.hidden = true;
+        button.setAttribute('aria-expanded', 'false');
+        wrap.classList.remove('open');
+      }
+      function open() {
+        closeCustomSelects(wrap);
+        renderMenu();
+        menu.hidden = false;
+        wrap.classList.add('open');
+        button.setAttribute('aria-expanded', 'true');
+        requestAnimationFrame(function () {
+          var rect = menu.getBoundingClientRect();
+          menu.style.left = rect.right > window.innerWidth - 12 ? 'auto' : '0';
+          menu.style.right = rect.right > window.innerWidth - 12 ? '0' : 'auto';
+          var active = menu.querySelector('.active');
+          if (active) active.scrollIntoView({ block: 'nearest' });
+        });
+      }
+      button.addEventListener('click', function (event) {
+        event.stopPropagation();
+        if (menu.hidden) open(); else close();
+      });
+      button.addEventListener('keydown', function (event) {
+        if (event.key === 'ArrowDown' || event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          open();
+          var first = menu.querySelector('.sc-select-option');
+          if (first) first.focus();
+        } else if (event.key === 'Escape') {
+          close();
+        }
+      });
+      menu.addEventListener('click', function (event) {
+        var option = event.target.closest('[data-index]');
+        if (!option) return;
+        var index = Number(option.getAttribute('data-index'));
+        if (select.selectedIndex !== index) {
+          select.selectedIndex = index;
+          select.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+        sync();
+        close();
+        button.focus();
+      });
+      menu.addEventListener('keydown', function (event) {
+        var options = Array.prototype.slice.call(menu.querySelectorAll('.sc-select-option'));
+        var current = options.indexOf(document.activeElement);
+        if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+          event.preventDefault();
+          var next = event.key === 'ArrowDown' ? Math.min(options.length - 1, current + 1) : Math.max(0, current - 1);
+          if (options[next]) options[next].focus();
+        } else if (event.key === 'Escape') {
+          close();
+          button.focus();
+        }
+      });
+      var observer = new MutationObserver(function () { sync(); });
+      observer.observe(select, { childList: true, subtree: true, characterData: true });
+      customSelects.push({ wrap: wrap, close: close, sync: sync });
+      sync();
+    });
+  };
+
+  document.addEventListener('click', function (event) {
+    customSelects.forEach(function (item) {
+      if (!item.wrap.contains(event.target)) item.close();
+    });
+  });
+
   SC.bindTilt = function (selector) {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     SC.$$(selector).forEach(function (card) {
@@ -638,6 +760,7 @@
     initScrollTitle();
     initImageFallbacks();
     enhanceTables();
+    SC.enhanceSelects();
     initReveal();
     if (typeof SC.afterChromeReady === 'function') SC.afterChromeReady();
   }

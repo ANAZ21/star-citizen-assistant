@@ -151,9 +151,9 @@
         '<div class="shop-counts">' +
           '<span><b>' + d.counts.buy + '</b> 飞船</span>' +
           '<span><b>' + d.counts.rent + '</b> 租赁</span>' +
-          '<span><b>' + d.counts.weapons + '</b> 武器</span>' +
+          '<span><b>' + d.counts.weapons + '</b> 飞船武器</span>' +
         '</div>' +
-        '<span class="shop-open">查看库存 <span class="arrow">→</span></span>' +
+        '<span class="shop-open">查看商品 <span class="arrow">→</span></span>' +
       '</a>';
     }).join('');
   }

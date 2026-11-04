@@ -543,3 +543,10 @@ body.drawer-open .atlas-focus { display: none; }
 .stock-card.component .stock-specs { margin: 10px 12px 0; }
 .stock-card.component .stock-price { margin: auto 12px 0; padding-top: 12px; }
 .place-stock-line.components span { color: var(--orange); }
+
+/* component category filter in shop inventory */
+.component-type-filter { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 10px; }
+.component-type-filter button { min-height: 30px; padding: 0 10px; border: 1px solid rgba(255,255,255,.12); border-radius: 7px; background: rgba(255,255,255,.035); color: var(--label-secondary); font-size: 11px; }
+.component-type-filter button:hover { color: var(--label); border-color: rgba(100,210,255,.3); }
+.component-type-filter button.active { border-color: rgba(100,210,255,.42); background: rgba(100,210,255,.1); color: var(--cyan); }
+.component-type-filter small { margin-left: 3px; color: var(--label-tertiary); font-family: var(--font-num); font-size: 10px; }

@@ -53,6 +53,7 @@ const state = {
   weaponSize: 'all',
   stockPage: 1,
   stockFilter: 'all',
+  componentType: 'all',
   selected: null
 };
 
@@ -1123,7 +1124,7 @@ function renderFilters() {
     ['main', '主城', count((l) => l.type === 'landing' || ['checkmate', 'ruin', 'orbituary'].includes(l.id))],
     ['shops', '商店', count((l) => isShop(l.id))],
     ['ships', '有飞船', count((l) => { const d = SC_SHOPS.locations[l.id]; return d && d.counts.buy; })],
-    ['weapons', '有武器', count((l) => { const d = SC_SHOPS.locations[l.id]; return d && d.counts.weapons; })],
+    ['weapons', '有飞船武器', count((l) => { const d = SC_SHOPS.locations[l.id]; return d && d.counts.weapons; })],
     ['rent', '可租赁', count((l) => { const d = SC_SHOPS.locations[l.id]; return d && d.counts.rent; })]
   ];
   host.innerHTML = defs.map(([key, label, n]) => `<button type="button" class="${state.filter === key ? 'active' : ''}" data-filter="${key}">${label} <small>${n}</small></button>`).join('');
@@ -1192,7 +1193,7 @@ function stockPreview(shop, feature) {
   if (shop.weapons.length) {
     const names = shop.weapons.slice().sort((a, b) => a.size - b.size || a.price - b.price).slice(0, limit).map(weaponName).join(' · ');
     const more = shop.weapons.length - Math.min(limit, shop.weapons.length);
-    lines.push(`<p class="place-stock-line"><span>武器</span>${esc(names)}${more > 0 ? ` <em>+${more}</em>` : ''}</p>`);
+    lines.push(`<p class="place-stock-line"><span>飞船武器</span>${esc(names)}${more > 0 ? ` <em>+${more}</em>` : ''}</p>`);
   }
   if (shop.rent.length) {
     const names = shop.rent.slice(0, limit).map((item) => { const ship = SC.shipById(item.shipId); return ship ? ship.name : ''; }).filter(Boolean).join(' · ');
@@ -1211,7 +1212,7 @@ function cardMarkup(loc, index) {
   const media = locationMedia(loc);
   const feature = loc.type === 'landing' || ['checkmate', 'ruin', 'orbituary'].includes(loc.id);
   const tagline = story ? (feature ? story.story[0] : story.tagline) : SC.zhText(loc.desc);
-  const countItems = shop ? [['buy', '飞船'], ['weapons', '武器'], ['rent', '租赁']].filter(([key]) => shop.counts[key] > 0) : [];
+  const countItems = shop ? [['buy', '飞船'], ['weapons', '飞船武器'], ['rent', '租赁']].filter(([key]) => shop.counts[key] > 0) : [];
   const counts = countItems.length
     ? `<div class="place-counts">${countItems.map(([key, label]) => `<span><b>${shop.counts[key]}</b>${label}</span>`).join('')}</div>`
     : '';
@@ -1233,7 +1234,7 @@ function cardMarkup(loc, index) {
       ${facilities ? `<div class="place-facilities">${facilities}</div>` : ''}
       ${stockPreview(shop, feature)}
       ${shipPreview(loc, shop)}
-      <div class="place-foot"><span>${shop ? (shop.counts.buy ? '商店档案 · ' + shop.counts.buy + ' 艘在售' : (shop.counts.components ? '配件档案 · ' + shop.counts.components + ' 件有售' : '商店档案')) : esc(typeLabel(loc.type)) + '档案'}</span><span class="open">${shop ? '查看库存' : '查看地点'} →</span></div>
+      <div class="place-foot"><span>${shop ? (shop.counts.buy ? '商店档案 · ' + shop.counts.buy + ' 艘在售' : (shop.counts.components ? '配件档案 · ' + shop.counts.components + ' 件有售' : '商店档案')) : esc(typeLabel(loc.type)) + '档案'}</span><span class="open">${shop ? '查看商品' : '查看地点'} →</span></div>
     </div>
   </a>`;
 }
@@ -1400,12 +1401,26 @@ function renderStockTools(loc, tab) {
   const shop = SC_SHOPS.locations[loc.id];
   const items = stockItems(shop, tab);
   if (!items.length) { host.innerHTML = ''; return; }
-  const sizes = Array.from(new Set(items.map((entry) => stockSizeOf(entry, tab)).filter((value) => value != null))).sort((a, b) => a - b);
-  const prices = items.map((entry) => tab === 'rent' ? entry.days[0] : entry.price);
+  const base = stockItems(shop, tab);
+  const scoped = tab === 'components' && state.componentType !== 'all'
+    ? items.filter((entry) => entry.type === state.componentType)
+    : items;
+  const sizes = Array.from(new Set(scoped.map((entry) => stockSizeOf(entry, tab)).filter((value) => value != null))).sort((a, b) => a - b);
+  const prices = scoped.map((entry) => tab === 'rent' ? entry.days[0] : entry.price);
   const sizeLabel = (size) => tab === 'weapons' || tab === 'components' ? 'S' + size : (SC.sizes[size] || size);
-  host.innerHTML = `<div class="stock-summary"><span>共 <b>${items.length}</b> 项</span><span>价格区间 <b>${fmt(Math.min.apply(null, prices))}</b> – <b>${fmt(Math.max.apply(null, prices))}</b> aUEC</span></div>
+  const typeCounts = tab === 'components'
+    ? Array.from(new Set(base.map((entry) => entry.type))).sort((a, b) => (componentOrder[a] || 0) - (componentOrder[b] || 0)).map((type) => [type, base.filter((entry) => entry.type === type).length])
+    : [];
+  const typeFilter = typeCounts.length > 1
+    ? `<div class="component-type-filter" role="group" aria-label="按配件类别筛选">
+        <button type="button" class="${state.componentType === 'all' ? 'active' : ''}" data-component-type="all">全部类别 <small>${base.length}</small></button>
+        ${typeCounts.map(([type, n]) => `<button type="button" class="${state.componentType === type ? 'active' : ''}" data-component-type="${esc(type)}">${esc(componentTypeLabel(type))} <small>${n}</small></button>`).join('')}
+      </div>`
+    : '';
+  host.innerHTML = `<div class="stock-summary"><span>共 <b>${scoped.length}</b> 项</span><span>价格区间 <b>${fmt(Math.min.apply(null, prices))}</b> – <b>${fmt(Math.max.apply(null, prices))}</b> aUEC</span></div>
+    ${typeFilter}
     <div class="weapon-sizes" role="group" aria-label="按尺寸筛选">
-      <button type="button" class="${state.stockFilter === 'all' ? 'active' : ''}" data-stock-filter="all">全部 <small>${items.length}</small></button>
+      <button type="button" class="${state.stockFilter === 'all' ? 'active' : ''}" data-stock-filter="all">全部 <small>${scoped.length}</small></button>
       ${sizes.map((size) => `<button type="button" class="${String(state.stockFilter) === String(size) ? 'active' : ''}" data-stock-filter="${esc(size)}">${esc(sizeLabel(size))}</button>`).join('')}
     </div>`;
 }
@@ -1416,7 +1431,7 @@ function renderDialogStock(loc, tab) {
   const pager = $('#dialog-stock-pager');
   if (!host) return;
   if (!shop) {
-    host.innerHTML = '<div class="dialog-stock-empty">该地点没有商店库存记录。</div>';
+    host.innerHTML = '<div class="dialog-stock-empty">该地点没有商店商品记录。</div>';
     if (pager) pager.innerHTML = '';
     renderStockTools(loc, tab);
     return;
@@ -1428,7 +1443,10 @@ function renderDialogStock(loc, tab) {
     renderStockTools(loc, tab);
     return;
   }
-  const items = stockItems(shop, tab).filter((entry) => state.stockFilter === 'all' || String(stockSizeOf(entry, tab)) === String(state.stockFilter));
+  const typed = tab === 'components' && state.componentType !== 'all'
+    ? stockItems(shop, tab).filter((entry) => entry.type === state.componentType)
+    : stockItems(shop, tab);
+  const items = typed.filter((entry) => state.stockFilter === 'all' || String(stockSizeOf(entry, tab)) === String(state.stockFilter));
   const pageSize = 4;
   const pages = Math.max(1, Math.ceil(items.length / pageSize));
   state.stockPage = Math.min(Math.max(1, state.stockPage), pages);
@@ -1451,6 +1469,7 @@ function openLocation(id, scroll) {
   state.weaponSize = 'all';
   state.stockPage = 1;
   state.stockFilter = 'all';
+  state.componentType = 'all';
   atlasState.selected = id;
   updateLabelVisibility();
   renderDialog(loc);
@@ -1480,7 +1499,7 @@ function renderDialog(loc) {
   const danger = riskLabel(loc.danger);
   const tabs = shop ? [
     ['ships', '飞船', shop.counts.buy],
-    ['weapons', '武器', shop.counts.weapons],
+    ['weapons', '飞船武器', shop.counts.weapons],
     ['rent', '租赁', shop.counts.rent],
     ['components', '配件', shop.counts.components || 0],
     ['packages', '套装', 1]
@@ -1508,7 +1527,7 @@ function renderDialog(loc) {
       </aside>
     </div>
     <section class="dialog-stock">
-      <div class="dialog-stock-head"><h3>${shop ? '商店库存' : '地点档案'}</h3>
+      <div class="dialog-stock-head"><h3>${shop ? '商店商品与租赁' : '地点档案'}</h3>
         ${tabs.length ? `<div class="dialog-stock-tabs">${tabs.map(([key, label, n]) => `<button type="button" class="${state.tab === key ? 'active' : ''}" data-dialog-tab="${key}">${label} <small>${n}</small></button>`).join('')}</div>` : ''}
       </div>
       <div id="dialog-stock-tools"></div>
@@ -1576,6 +1595,14 @@ function init() {
         renderDialogStock(SC.locationById(state.selected), state.tab);
         return;
       }
+      const componentType = event.target.closest('[data-component-type]');
+      if (componentType && state.selected) {
+        state.componentType = componentType.dataset.componentType;
+        state.stockPage = 1;
+        state.stockFilter = 'all';
+        renderDialogStock(SC.locationById(state.selected), state.tab);
+        return;
+      }
       const pageButton = event.target.closest('[data-stock-page]');
       if (pageButton && state.selected) {
         state.stockPage = Math.max(1, state.stockPage + (pageButton.dataset.stockPage === 'next' ? 1 : -1));
@@ -1587,6 +1614,7 @@ function init() {
         state.tab = tab.dataset.dialogTab;
         state.stockPage = 1;
         state.stockFilter = 'all';
+        state.componentType = 'all';
         renderDialog(SC.locationById(state.selected));
       }
     });

@@ -9,7 +9,7 @@
 
   var meta = window.SC_COMPONENT_META || { types: {}, classes: {}, manufacturers: {} };
   var items = window.SC_COMPONENTS || [];
-  var typeOrder = { power: 0, shield: 1, cooler: 2, quantum: 3 };
+  var typeOrder = { power: 0, shield: 1, cooler: 2, quantum: 3, weapon: 4 };
   var PAGE_SIZE = 12;
 
   var state = { type: 'all', q: '', size: 'all', sort: 'default', page: 1 };
@@ -40,6 +40,16 @@
     var loc = id && SC.locationById ? SC.locationById(id) : null;
     return loc ? (SC.zhName(loc) || loc.name) : '';
   };
+  var displayName = function (item) {
+    if (item.type === 'weapon' && SC.weaponName) return SC.weaponName(item.en || item.name);
+    return item.name || item.en;
+  };
+  var weaponClass = function (item) {
+    return SC.weaponType ? SC.weaponType({ name: item.en || item.name }) : '飞船武器';
+  };
+  var itemClass = function (item) {
+    return item.type === 'weapon' ? weaponClass(item) : classLabel(item.itemClass);
+  };
 
   function shopLine(shop) {
     var place = shop.loc || locationName(shop.locId) || '未知地点';
@@ -56,27 +66,44 @@
     };
     if (item.type === 'power') {
       add('出力', s.output);
+      add('冷却消耗', s.coolant);
       add('耐久', s.durability, ' HP', 0);
+      add('体积', s.volume, ' μSCU', 0);
     } else if (item.type === 'shield') {
       add('最大护盾', s.max, ' HP', 0);
       add('恢复 / 秒', s.regen, ' HP', 0);
       add('功耗', s.power);
       add('耐久', s.durability, ' HP', 0);
+      add('重启延迟', s.downed, ' s');
+      add('受伤延迟', s.dmgDelay, ' s');
+      add('体积', s.volume, ' μSCU', 0);
     } else if (item.type === 'cooler') {
       add('制冷', s.rate);
       add('功耗', s.power);
       add('耐久', s.durability, ' HP', 0);
+      add('体积', s.volume, ' μSCU', 0);
     } else if (item.type === 'quantum') {
       if (s.speed != null) rows.push({ label: '速度', value: fmt(Math.round(s.speed / 1000)) + ' km/s' });
       add('充能', s.spool, ' s');
       add('冷却', s.cooldown, ' s');
       add('燃料', s.fuel);
+      add('功耗', s.power);
+      add('耐久', s.durability, ' HP', 0);
+      add('体积', s.volume, ' μSCU', 0);
+    } else if (item.type === 'weapon') {
+      add('DPS', s.dps);
+      add('持续 DPS', s.sustained);
+      if (s.range != null) rows.push({ label: '射程', value: (s.range / 1000).toFixed(1) + ' km' });
+      add('单发伤害', s.alpha);
+      add('射速', s.rpm, ' rpm', 0);
     }
-    return rows.slice(0, 4);
+    return rows;
   }
 
-  function statsMarkup(item) {
-    return '<div class="component-stats">' + statRows(item).map(function (row) {
+  function statsMarkup(item, expanded) {
+    var rows = statRows(item);
+    if (!expanded) rows = rows.slice(0, 4);
+    return '<div class="component-stats' + (expanded ? ' expanded' : '') + '">' + rows.map(function (row) {
       return '<span><i>' + esc(row.label) + '</i><b>' + esc(row.value) + '</b></span>';
     }).join('') + '</div>';
   }
@@ -104,13 +131,13 @@
   }
 
   function cardMarkup(item, index) {
-    var name = item.name || item.en;
-    var en = item.en && item.en !== item.name ? '<small>' + esc(item.en) + '</small>' : '';
+    var name = displayName(item);
+    var en = item.en && item.en !== name ? '<small>' + esc(item.en) + '</small>' : '';
     var shops = sortedShops(item);
     return '<article class="component-card reveal" data-component="' + esc(item.id) + '" tabindex="0" style="--i:' + (index % 6) + '">' +
       '<div class="component-card-head"><span class="component-type">' + esc(typeLabel(item.type)) + '</span><span class="component-size">S' + esc(item.size == null ? '—' : item.size) + '</span></div>' +
       '<h3 class="component-name">' + esc(name) + en + '</h3>' +
-      '<p class="component-maker">' + esc(manuLabel(item.manu)) + ' · ' + esc(classLabel(item.itemClass)) + (item.grade ? ' · ' + esc(item.grade) + ' 级' : '') + '</p>' +
+      '<p class="component-maker">' + esc(manuLabel(item.manu)) + ' · ' + esc(itemClass(item)) + (item.grade ? ' · ' + esc(item.grade) + ' 级' : '') + '</p>' +
       statsMarkup(item) +
       '<div class="component-shops">' + shopRows(item, 3) + '</div>' +
       '<div class="component-card-foot"><span>' + shops.length + ' 个地点 · 最低 ' + (item.minPrice == null ? '—' : fmt(item.minPrice, 0) + ' aUEC') + '</span><button class="component-open" type="button" data-open-component="' + esc(item.id) + '">全部地点 →</button></div>' +
@@ -148,7 +175,7 @@
   function renderMatrix() {
     var host = els.matrix;
     if (!host) return;
-    var order = ['power', 'shield', 'cooler', 'quantum'];
+    var order = ['power', 'shield', 'cooler', 'quantum', 'weapon'];
     host.innerHTML = order.map(function (type) {
       var list = items.filter(function (item) { return item.type === type; });
       var min = Math.min.apply(null, list.map(function (item) { return item.minPrice == null ? Infinity : item.minPrice; }));
@@ -162,7 +189,7 @@
 
   function renderTypeTabs() {
     if (!els.tabs) return;
-    var defs = [['all', '全部', items.length]].concat(['power', 'shield', 'cooler', 'quantum'].map(function (type) {
+    var defs = [['all', '全部', items.length]].concat(['power', 'shield', 'cooler', 'quantum', 'weapon'].map(function (type) {
       return [type, typeLabel(type), items.filter(function (item) { return item.type === type; }).length];
     }));
     els.tabs.innerHTML = defs.map(function (def) {
@@ -245,16 +272,16 @@
         : '<div class="component-shop-row">' + body + '</div>';
     }).join('');
 
-    var name = item.name || item.en;
-    var en = item.en && item.en !== item.name ? '<small>' + esc(item.en) + '</small>' : '';
+    var name = displayName(item);
+    var en = item.en && item.en !== name ? '<small>' + esc(item.en) + '</small>' : '';
     els.inner.innerHTML =
       '<button class="modal-close" type="button" data-component-close aria-label="关闭">' + SC.icon.close + '</button>' +
       '<div class="component-modal-head">' +
         '<div class="component-modal-kicker">' + esc(typeLabel(item.type)) + ' / S' + esc(item.size == null ? '—' : item.size) + '</div>' +
         '<h2>' + esc(name) + en + '</h2>' +
-        '<p>' + esc(manuLabel(item.manu)) + ' · ' + esc(classLabel(item.itemClass)) + (item.grade ? ' · ' + esc(item.grade) + ' 级' : '') + '</p>' +
+        '<p>' + esc(manuLabel(item.manu)) + ' · ' + esc(itemClass(item)) + (item.grade ? ' · ' + esc(item.grade) + ' 级' : '') + '</p>' +
       '</div>' +
-      statsMarkup(item) +
+      statsMarkup(item, true) +
       '<div class="component-modal-shops-head"><h4>购买地点</h4><span>' + shops.length + ' 个地点 · 按价格排序</span></div>' +
       '<div class="component-modal-shops">' + allShops + '</div>' +
       '<p class="component-modal-note">价格为 CStone Universal Item Finder 社区记录，单位 aUEC；库存与价格可能随版本变动。</p>';
@@ -295,6 +322,7 @@
 
     renderMatrix();
     renderSizes();
+    if (SC.syncSelects) SC.syncSelects();
     render();
 
     els.matrix.addEventListener('click', function (event) {
@@ -334,6 +362,7 @@
     els.reset.addEventListener('click', function () {
       state.type = 'all'; state.q = ''; state.size = 'all'; state.sort = 'default'; state.page = 1;
       els.search.value = ''; els.size.value = 'all'; els.sort.value = 'default';
+      if (SC.syncSelects) SC.syncSelects();
       render();
       updateUrl();
     });

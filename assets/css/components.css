@@ -250,3 +250,6 @@ a.component-shop-row:hover { background: rgba(255, 255, 255, .06); }
 .component-open { font-size: 11px; }
 .component-matrix-cell small { font-size: 10px; }
 .component-modal-note { font-size: 11px; }
+
+.component-matrix-cell:last-child:nth-child(odd) { grid-column: span 2; min-height: 86px; }
+.component-stats.expanded { grid-template-columns: repeat(4, minmax(0, 1fr)); }

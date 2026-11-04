@@ -195,6 +195,7 @@
     state.q = ''; state.role = '全部'; state.size = '全部'; state.maker = ''; state.status = ''; state.sort = 'default'; state.favOnly = false; state.shopOnly = false;
     els.search.value = ''; els.maker.value = ''; els.status.value = ''; els.sort.value = 'default';
     els.favFilter.classList.remove('active'); els.shopFilter.classList.remove('active');
+    if (SC.syncSelects) SC.syncSelects();
     SC.$$('.chip', els.roleChips).forEach(function (b) { b.classList.toggle('active', b.getAttribute('data-role') === '全部'); });
     SC.$$('.chip', els.sizeChips).forEach(function (b) { b.classList.toggle('active', b.getAttribute('data-size') === '全部'); });
     render();
