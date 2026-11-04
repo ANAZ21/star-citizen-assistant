@@ -478,3 +478,55 @@ body.atlas-fullscreen .app-main { animation: none; transform: none; }
 .dialog-note { font-size: 11px; }
 .location-dialog { width: min(1120px, calc(100vw - 80px)); }
 .dialog-body { grid-template-columns: minmax(0, 1fr) 300px; }
+
+/* ---------- right-side location drawer ---------- */
+body.drawer-open { overflow: hidden; }
+body.drawer-open .atlas-focus { display: none; }
+.location-dialog {
+  position: fixed; inset: 0 0 0 auto; margin: 0;
+  width: min(640px, 58vw); height: 100vh; max-height: 100vh;
+  border: 0; border-left: 1px solid rgba(255,255,255,.14);
+  border-radius: 0;
+  background: rgba(7,10,14,.84);
+  -webkit-backdrop-filter: blur(28px) saturate(140%); backdrop-filter: blur(28px) saturate(140%);
+  box-shadow: -30px 0 100px rgba(0,0,0,.6);
+}
+.location-dialog[open] { animation: drawer-in .5s cubic-bezier(.22,1,.36,1) both; }
+@keyframes drawer-in { from { opacity: .4; transform: translateX(100%); } to { opacity: 1; transform: none; } }
+.location-dialog::backdrop { background: rgba(0,0,0,.26); -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px); }
+.location-dialog-shell { height: 100vh; max-height: 100vh; overflow-y: auto; }
+.dialog-hero { min-height: 240px; }
+.dialog-hero.has-media { min-height: 260px; }
+.dialog-body { grid-template-columns: 1fr; gap: 18px; padding: 24px 26px 26px; }
+.dialog-side { border-left: 0; border-top: 1px solid rgba(255,255,255,.09); padding-left: 0; padding-top: 18px; }
+.dialog-stock { padding: 0 26px 26px; }
+.dialog-stock-head h3 { font-size: 26px; }
+.atlas-focus-close { position: absolute; z-index: 8; top: 9px; right: 9px; width: 30px; height: 30px; border: 1px solid rgba(255,255,255,.16); background: rgba(4,7,10,.6); color: var(--label-secondary); font-size: 18px; line-height: 28px; text-align: center; }
+.atlas-focus-close:hover { color: var(--orange); border-color: rgba(255,159,10,.5); }
+
+/* stock cards */
+.dialog-stock-list { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.stock-card { display: flex; flex-direction: column; min-width: 0; overflow: hidden; border: 1px solid rgba(255,255,255,.09); border-radius: 10px; background: rgba(255,255,255,.035); }
+.stock-card-media { aspect-ratio: 16 / 9; overflow: hidden; background: #10151a; }
+.stock-card-media img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.stock-card-body { display: flex; flex-direction: column; flex: 1; padding: 11px 12px 12px; }
+.stock-card-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 11px 12px 0; }
+.stock-size { display: grid; place-items: center; width: 34px; height: 34px; border: 1px solid rgba(100,210,255,.35); color: var(--cyan); font-family: var(--font-num); font-size: 16px; font-weight: 600; }
+.stock-kind { color: var(--label-secondary); font-size: 11px; }
+.stock-name { display: block; color: var(--label); font-size: 16px; line-height: 1.25; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.stock-sub { display: block; margin-top: 2px; color: var(--label-tertiary); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.stock-specs { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 10px; margin-top: 10px; }
+.stock-specs span { min-width: 0; }
+.stock-specs i { display: block; color: var(--label-tertiary); font-size: 10px; font-style: normal; }
+.stock-specs b { display: block; margin-top: 1px; color: var(--label-secondary); font-size: 12px; line-height: 1.35; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.stock-price { margin-top: auto; padding-top: 10px; color: var(--label); font-family: var(--font-num); font-size: 19px; font-weight: 600; }
+.stock-price small { margin-left: 4px; color: var(--label-tertiary); font-family: var(--font-mono); font-size: 9px; font-weight: 400; }
+.stock-days { margin-top: 2px; color: var(--label-tertiary); font-size: 10px; }
+.stock-card.weapon { padding-bottom: 12px; }
+.stock-card.weapon .stock-name { padding: 10px 12px 0; white-space: normal; }
+.stock-card.weapon .stock-sub { padding: 2px 12px 0; white-space: normal; line-height: 1.45; }
+.stock-card.weapon .stock-price { margin: auto 12px 0; padding-top: 12px; }
+.stock-pager { display: flex; align-items: center; justify-content: center; gap: 14px; margin-top: 16px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,.08); color: var(--label-secondary); font-size: 12px; }
+.stock-pager button { min-height: 34px; padding: 0 14px; border: 1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.04); color: var(--label); font-size: 12px; }
+.stock-pager button:disabled { opacity: .35; }
+.stock-pager b { color: var(--label); font-size: 14px; }

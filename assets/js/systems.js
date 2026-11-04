@@ -23,7 +23,7 @@ const storyFor = (loc) => (window.SC_STORIES && SC_STORIES[loc.id]) || null;
 const locationMedia = (loc) => (window.SC_LOCATION_MEDIA && SC_LOCATION_MEDIA[loc.id]) || null;
 
 const PLANET_TEXTURES = {
-  hurston: 'assets/img/planets/hurston-surface.webp',
+  hurston: 'assets/img/planets/hurston.webp',
   crusader: 'assets/img/planets/crusader.webp',
   arccorp: 'assets/img/planets/arccorp.webp',
   microtech: 'assets/img/planets/microtech.webp',
@@ -32,17 +32,21 @@ const PLANET_TEXTURES = {
   bloom: 'assets/img/planets/bloom.webp',
   fairo: 'assets/img/planets/fairo.webp',
   fuego: 'assets/img/planets/fuego.webp',
-  terminus: 'assets/img/planets/terminus.webp'
+  terminus: 'assets/img/planets/terminus.webp',
+  delamar: 'assets/img/planets/delamar.webp'
 };
 
 const MOON_TEXTURES = window.SC_MOON_TEXTURES || {};
 const PLANET_DETAIL = window.SC_PLANET_DETAIL || {};
+const STAR_TEXTURE = 'assets/img/systems/star.webp';
 
 const state = {
   system: 'stanton',
   filter: 'all',
   tab: 'ships',
   weaponSize: 'all',
+  stockPage: 1,
+  stockFilter: 'all',
   selected: null
 };
 
@@ -287,6 +291,128 @@ function disposeGroup(group) {
   });
 }
 
+
+/* ---------- station models ---------- */
+function stationMaterials(accent) {
+  return {
+    metal: new THREE.MeshStandardMaterial({ color: 0x6d7884, metalness: 0.78, roughness: 0.34 }),
+    dark: new THREE.MeshStandardMaterial({ color: 0x1b2229, metalness: 0.55, roughness: 0.48 }),
+    panel: new THREE.MeshStandardMaterial({ color: 0x10171d, metalness: 0.35, roughness: 0.55 }),
+    glow: new THREE.MeshStandardMaterial({ color: 0x0a0d10, emissive: accent || 0x64d2ff, emissiveIntensity: 1.4 }),
+    accent: new THREE.MeshStandardMaterial({ color: accent || 0xff9f0a, metalness: 0.4, roughness: 0.45, emissive: accent || 0xff9f0a, emissiveIntensity: 0.35 })
+  };
+}
+
+function addStationMesh(group, geometry, material, position, rotation) {
+  const mesh = new THREE.Mesh(geometry, material);
+  if (position) mesh.position.set(position[0], position[1], position[2]);
+  if (rotation) mesh.rotation.set(rotation[0], rotation[1], rotation[2]);
+  group.add(mesh);
+  return mesh;
+}
+
+function makeStationModel(id) {
+  const group = new THREE.Group();
+  const accent = id === 'checkmate' || id === 'ruin' || id === 'orbituary' || id === 'starlight' ? 0xff9f0a : 0x64d2ff;
+  const m = stationMaterials(accent);
+  const ring = (r, tube, material) => addStationMesh(group, new THREE.TorusGeometry(r, tube, 16, 72), material);
+  const spoke = (len, material, rotation) => addStationMesh(group, new THREE.BoxGeometry(len, 0.045, 0.045), material, null, rotation);
+
+  if (id === 'everus') {
+    addStationMesh(group, new THREE.CylinderGeometry(0.16, 0.22, 1.1, 16), m.metal);
+    ring(0.86, 0.055, m.metal).rotation.x = Math.PI / 2;
+    for (let i = 0; i < 4; i++) {
+      const a = (i / 4) * Math.PI * 2;
+      spoke(1.72, m.metal, [0, a, 0]);
+    }
+    addStationMesh(group, new THREE.BoxGeometry(0.42, 0.18, 0.3), m.dark, [0, 0.58, 0]);
+    addStationMesh(group, new THREE.BoxGeometry(0.5, 0.05, 0.05), m.glow, [0, 0.68, 0]);
+    addStationMesh(group, new THREE.CylinderGeometry(0.015, 0.015, 0.75, 6), m.metal, [0, 1.15, 0]);
+  } else if (id === 'seraphim') {
+    ring(0.9, 0.05, m.metal).rotation.x = Math.PI / 2;
+    ring(0.72, 0.04, m.accent).rotation.y = Math.PI / 2;
+    addStationMesh(group, new THREE.SphereGeometry(0.24, 20, 14), m.dark);
+    addStationMesh(group, new THREE.CylinderGeometry(0.08, 0.12, 0.7, 10), m.metal, [0, 0.62, 0]);
+    addStationMesh(group, new THREE.BoxGeometry(1.4, 0.02, 0.34), m.panel, [0, 0.72, 0]);
+  } else if (id === 'baijini') {
+    addStationMesh(group, new THREE.BoxGeometry(1.45, 0.16, 0.22), m.metal);
+    addStationMesh(group, new THREE.BoxGeometry(0.55, 0.38, 0.5), m.dark, [-0.62, 0.12, 0]);
+    for (let i = 0; i < 4; i++) {
+      addStationMesh(group, new THREE.BoxGeometry(0.22, 0.16, 0.36), m.accent, [0.05 + i * 0.25, 0.24, 0]);
+    }
+    addStationMesh(group, new THREE.BoxGeometry(1.1, 0.03, 0.65), m.panel, [0.35, 0.42, 0]);
+    addStationMesh(group, new THREE.BoxGeometry(0.03, 0.03, 0.85), m.metal, [0.9, 0.05, 0]);
+  } else if (id === 'tressler') {
+    addStationMesh(group, new THREE.CylinderGeometry(0.1, 0.1, 1.8, 12), m.metal);
+    for (let i = 0; i < 3; i++) {
+      const r = ring(0.58 + i * 0.18, 0.035, i === 1 ? m.accent : m.metal);
+      r.rotation.x = Math.PI / 2;
+      r.position.y = -0.5 + i * 0.5;
+    }
+    addStationMesh(group, new THREE.BoxGeometry(1.5, 0.02, 0.28), m.panel, [0, 0.55, 0]);
+    addStationMesh(group, new THREE.CylinderGeometry(0.02, 0.02, 0.6, 6), m.metal, [0, 1.1, 0]);
+  } else if (id === 'grim-hex') {
+    addStationMesh(group, new THREE.DodecahedronGeometry(0.55, 0), new THREE.MeshStandardMaterial({ color: 0x4b4038, metalness: 0.25, roughness: 0.92 }));
+    addStationMesh(group, new THREE.BoxGeometry(0.5, 0.16, 0.28), m.dark, [0.45, 0.18, 0]);
+    addStationMesh(group, new THREE.BoxGeometry(0.26, 0.18, 0.32), m.accent, [-0.35, -0.2, 0.15]);
+    addStationMesh(group, new THREE.CylinderGeometry(0.015, 0.015, 0.8, 6), m.metal, [0.1, 0.75, 0]);
+  } else if (id === 'kareah') {
+    addStationMesh(group, new THREE.CylinderGeometry(0.45, 0.55, 0.28, 8), m.metal);
+    addStationMesh(group, new THREE.BoxGeometry(0.65, 0.24, 0.65), m.dark, [0, 0.24, 0]);
+    for (let i = 0; i < 4; i++) {
+      const a = (i / 4) * Math.PI * 2;
+      addStationMesh(group, new THREE.BoxGeometry(0.22, 0.08, 0.36), m.accent, [Math.cos(a) * 0.62, 0.2, Math.sin(a) * 0.62], [0, -a, 0]);
+    }
+    ring(0.82, 0.025, m.glow).rotation.x = Math.PI / 2;
+  } else if (id === 'pyro-gateway' || id === 'terra-gateway' || id === 'lagrange') {
+    const gate = id !== 'lagrange';
+    if (gate) {
+      addStationMesh(group, new THREE.TorusGeometry(1.05, 0.09, 16, 64), m.metal);
+      addStationMesh(group, new THREE.TorusGeometry(0.8, 0.025, 8, 64), m.glow);
+      addStationMesh(group, new THREE.BoxGeometry(0.8, 0.12, 0.12), m.dark, [0, -1.02, 0]);
+      addStationMesh(group, new THREE.BoxGeometry(0.12, 0.55, 0.12), m.metal, [-0.85, -0.7, 0]);
+      addStationMesh(group, new THREE.BoxGeometry(0.12, 0.55, 0.12), m.metal, [0.85, -0.7, 0]);
+    } else {
+      addStationMesh(group, new THREE.BoxGeometry(0.55, 0.22, 0.4), m.dark);
+      addStationMesh(group, new THREE.BoxGeometry(1.3, 0.025, 0.3), m.panel);
+      addStationMesh(group, new THREE.CylinderGeometry(0.24, 0.24, 0.05, 20), m.glow, [0, 0.24, 0]);
+      addStationMesh(group, new THREE.CylinderGeometry(0.02, 0.02, 0.7, 6), m.metal, [0, 0.5, 0]);
+    }
+  } else if (id === 'checkmate') {
+    addStationMesh(group, new THREE.BoxGeometry(0.7, 0.32, 0.5), m.dark);
+    ring(0.78, 0.045, m.metal).rotation.x = Math.PI / 2;
+    for (let i = 0; i < 3; i++) {
+      const a = (i / 3) * Math.PI * 2;
+      addStationMesh(group, new THREE.BoxGeometry(0.28, 0.08, 0.08), m.accent, [Math.cos(a) * 0.75, 0.2, Math.sin(a) * 0.75], [0, -a, 0]);
+    }
+    addStationMesh(group, new THREE.CylinderGeometry(0.02, 0.02, 0.9, 6), m.metal, [0.15, 0.65, 0]);
+  } else if (id === 'ruin') {
+    const broken = addStationMesh(group, new THREE.TorusGeometry(0.86, 0.06, 12, 32, Math.PI * 1.35), m.metal);
+    broken.rotation.x = Math.PI / 2;
+    addStationMesh(group, new THREE.BoxGeometry(0.5, 0.2, 0.3), m.dark, [0.35, 0.12, 0.2], [0.2, 0.5, 0.4]);
+    addStationMesh(group, new THREE.BoxGeometry(0.35, 0.14, 0.28), m.accent, [-0.42, -0.15, 0.1], [0.1, -0.4, 0.2]);
+    addStationMesh(group, new THREE.CylinderGeometry(0.015, 0.015, 0.7, 6), m.metal, [0.2, 0.55, -0.1], [0.3, 0, 0.2]);
+  } else if (id === 'orbituary') {
+    addStationMesh(group, new THREE.CylinderGeometry(0.08, 0.08, 1.9, 10), m.metal);
+    for (let i = 0; i < 3; i++) {
+      const y = -0.6 + i * 0.6;
+      addStationMesh(group, new THREE.CylinderGeometry(0.22, 0.22, 0.36, 12), m.dark, [0, y, 0], [Math.PI / 2, 0, 0]);
+      addStationMesh(group, new THREE.BoxGeometry(0.9, 0.02, 0.35), m.panel, [0, y + 0.2, 0]);
+    }
+    addStationMesh(group, new THREE.CylinderGeometry(0.26, 0.26, 0.05, 20), m.glow, [0, 0.55, 0]);
+  } else {
+    addStationMesh(group, new THREE.BoxGeometry(0.5, 0.24, 0.36), m.dark);
+    addStationMesh(group, new THREE.BoxGeometry(1.2, 0.02, 0.22), m.panel);
+    addStationMesh(group, new THREE.CylinderGeometry(0.2, 0.2, 0.05, 18), m.glow, [0, 0.2, 0]);
+    addStationMesh(group, new THREE.CylinderGeometry(0.015, 0.015, 0.6, 6), m.metal, [0, 0.45, 0]);
+  }
+  group.scale.setScalar(0.62);
+  group.userData.station = true;
+  group.userData.id = id;
+  group.traverse((child) => { if (child.isMesh) child.userData.id = id; });
+  return group;
+}
+
 function buildSystem(systemId) {
   restorePlanetDetail();
   atlasState.tween = null;
@@ -303,13 +429,22 @@ function buildSystem(systemId) {
 
   const glowTexture = makeGlowTexture();
   if (!cityIconTexture) cityIconTexture = makeCityIconTexture();
-  const star = new THREE.Mesh(new THREE.SphereGeometry(2.3, 32, 24), new THREE.MeshBasicMaterial({ color: 0xfff1c9 }));
+  const pyro = systemId === 'pyro';
+  const star = new THREE.Mesh(
+    new THREE.SphereGeometry(2.3, 64, 40),
+    new THREE.MeshBasicMaterial({ map: textures.sun || null, color: pyro ? 0xffb07a : 0xfff4dc })
+  );
   systemGroup.add(star);
-  const starGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture, color: 0xffc26e, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0.78 }));
-  starGlow.scale.set(22, 22, 1);
+  const starGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture, color: pyro ? 0xff7a45 : 0xffc26e, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0.82 }));
+  starGlow.scale.set(pyro ? 24 : 22, pyro ? 24 : 22, 1);
   systemGroup.add(starGlow);
-  const starLight = new THREE.PointLight(0xffd7a2, 3.8, 0, 0);
+  const corona = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture, color: pyro ? 0xff5a2a : 0xffd28a, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0.24 }));
+  corona.scale.set(36, 36, 1);
+  systemGroup.add(corona);
+  const starLight = new THREE.PointLight(pyro ? 0xffb07a : 0xffd7a2, 3.8, 0, 0);
   systemGroup.add(starLight);
+  systemGroup.userData.star = star;
+  systemGroup.userData.corona = corona;
 
   const orbitMaterial = new THREE.LineBasicMaterial({ color: 0x64d2ff, transparent: true, opacity: 0.11 });
   layout.nodes.filter((node) => node.loc.type === 'planet').forEach((node) => {
@@ -362,6 +497,8 @@ function buildSystem(systemId) {
         new THREE.SphereGeometry(node.radius, 32, 20),
         new THREE.MeshStandardMaterial({ map: texture || null, color: texture ? 0xffffff : 0x8997a3, roughness: 1 })
       );
+    } else if (loc.type === 'station') {
+      mesh = makeStationModel(loc.id);
     } else if (loc.type === 'landing') {
       mesh = new THREE.Sprite(new THREE.SpriteMaterial({ map: cityIconTexture, color: 0xffffff, transparent: true, depthWrite: false, depthTest: true }));
       mesh.scale.set(0.72, 0.72, 1);
@@ -374,8 +511,10 @@ function buildSystem(systemId) {
     node.mesh = mesh;
 
     if (node.shop) {
+      const ringInner = loc.type === 'station' ? 1.05 : Math.max(0.55, node.radius + 0.35);
+      const ringOuter = loc.type === 'station' ? 1.28 : Math.max(0.7, node.radius + 0.5);
       const ring = new THREE.Mesh(
-        new THREE.RingGeometry(Math.max(0.55, node.radius + 0.35), Math.max(0.7, node.radius + 0.5), 32),
+        new THREE.RingGeometry(ringInner, ringOuter, 40),
         new THREE.MeshBasicMaterial({ color: node.buy ? 0xff9f0a : 0x64d2ff, transparent: true, opacity: 0.52, side: THREE.DoubleSide, depthWrite: false })
       );
       ring.position.copy(node.position);
@@ -772,7 +911,7 @@ function bindAtlas() {
   const focusHost = $('#atlas-focus');
   if (focusHost) {
     focusHost.addEventListener('click', (event) => {
-      if (event.target.closest('[data-atlas-focus-back]')) { leaveFocus(); return; }
+      if (event.target.closest('[data-atlas-focus-close]') || event.target.closest('[data-atlas-focus-back]')) { leaveFocus(); return; }
       if (event.target.closest('[data-atlas-focus-info]') && atlasState.focus) openLocation(atlasState.focus, false);
       const site = event.target.closest('[data-focus-site]');
       if (site) openLocation(site.dataset.focusSite, false);
@@ -861,9 +1000,20 @@ function animate(t) {
   if (ambientLight) ambientLight.intensity = lerp(ambientLight.intensity, atlasState.focus ? 1.35 : 0.95, 0.05);
   if (systemGroup) systemGroup.updateMatrixWorld();
   if (starField) starField.rotation.y += delta * 0.0015;
+  if (systemGroup && systemGroup.userData.star) {
+    systemGroup.userData.star.rotation.y += delta * 0.025;
+    const corona = systemGroup.userData.corona;
+    if (corona) {
+      const pulse = 0.5 + 0.5 * Math.sin(elapsed * 1.4);
+      corona.material.opacity = 0.18 + pulse * 0.1;
+      const size = 34 + pulse * 5;
+      corona.scale.set(size, size, 1);
+    }
+  }
   if (systemGroup) {
     systemGroup.children.forEach((obj) => {
       if (obj.userData && obj.userData.shopRing) { obj.quaternion.copy(camera.quaternion); obj.visible = !atlasState.focus; }
+      if (obj.userData && obj.userData.station) obj.rotation.y += delta * 0.055;
     });
   }
   labelTimer += delta;
@@ -927,7 +1077,7 @@ function initAtlas() {
     if (els.loading) els.loading.innerHTML = '<b>ATLAS TEXTURE ERROR</b><small>无法载入行星贴图</small>';
   };
   const loader = new THREE.TextureLoader(manager);
-  Object.entries({ ...PLANET_TEXTURES, ...MOON_TEXTURES }).forEach(([id, src]) => {
+  Object.entries({ sun: STAR_TEXTURE, ...PLANET_TEXTURES, ...MOON_TEXTURES }).forEach(([id, src]) => {
     const texture = loader.load(src);
     texture.colorSpace = THREE.SRGBColorSpace;
     texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
@@ -1088,6 +1238,7 @@ function renderCards() {
   }
   els.grid.innerHTML = locations.map(cardMarkup).join('');
   if (typeof SC.refreshReveal === 'function') SC.refreshReveal();
+  if (SC.bindTilt) SC.bindTilt('.place-card');
 }
 
 function switchSystem(id, updateUrl) {
@@ -1125,57 +1276,108 @@ function updateCount() {
 }
 
 /* ---------- location dialog ---------- */
-function stockRow(entry, kind) {
+function stockCard(entry, kind) {
   if (kind === 'weapon') {
     const type = SC.weaponType ? SC.weaponType(entry) : '';
-    return `<div class="dialog-stock-row weapon" title="${esc(entry.name)}"><span class="size">S${esc(entry.size || '—')}</span><span class="name"><b>${esc(weaponName(entry))}</b><small>${esc(type)} · ${esc(weaponManu(entry))} · ${esc(shopName(entry.shop))}</small></span><span class="value">${fmt(entry.price)}<small>aUEC</small></span></div>`;
+    return `<article class="stock-card weapon">
+      <div class="stock-card-head"><span class="stock-size">S${esc(entry.size || '—')}</span><span class="stock-kind">${esc(type)}</span></div>
+      <b class="stock-name">${esc(weaponName(entry))}</b>
+      <small class="stock-sub">${esc(weaponManu(entry))} · ${esc(shopName(entry.shop))}</small>
+      <div class="stock-price">${fmt(entry.price)}<small>aUEC</small></div>
+    </article>`;
   }
   const ship = SC.shipById(entry.shipId);
   if (!ship) return '';
   const media = SC.shipMedia(ship.id) || {};
-  const shipLabel = ship.cn ? `${esc(ship.cn)} · ${esc(shopName(entry.shop))}` : esc(shopName(entry.shop));
+  const image = media.card ? `<img src="${esc(media.card)}" width="800" height="450" alt="${esc(ship.name)}" loading="lazy" decoding="async">` : '';
+  const specs = `<div class="stock-specs">
+    <span><i>货舱</i><b>${ship.cargo ? fmt(ship.cargo) + ' SCU' : '—'}</b></span>
+    <span><i>乘员</i><b>${esc(ship.crew)}</b></span>
+    <span><i>SCM</i><b>${ship.scm ? fmt(ship.scm) + ' m/s' : '—'}</b></span>
+    <span><i>武装</i><b>${esc(ship.weapons || '—')}</b></span>
+  </div>`;
   if (kind === 'rent') {
-    return `<div class="dialog-stock-row"><img src="${esc(media.card || '')}" width="800" height="450" alt="${esc(ship.name)}" loading="lazy" decoding="async"><span class="name"><b>${esc(ship.name)}</b><small>${shipLabel} · 1/7/30 日 ${fmt(entry.days[0])} / ${fmt(entry.days[2])} / ${fmt(entry.days[3])}</small></span><span class="value">${fmt(entry.days[0])}<small>1日 / aUEC</small></span></div>`;
+    return `<article class="stock-card">
+      <div class="stock-card-media">${image}</div>
+      <div class="stock-card-body">
+        <b class="stock-name">${esc(ship.name)}</b>
+        <small class="stock-sub">${esc(ship.cn)} · ${esc(shopName(entry.shop))}</small>
+        ${specs}
+        <div class="stock-price">${fmt(entry.days[0])}<small>1日 / aUEC</small></div>
+        <div class="stock-days">7日 ${fmt(entry.days[2])} · 30日 ${fmt(entry.days[3])}</div>
+      </div>
+    </article>`;
   }
-  return `<div class="dialog-stock-row"><img src="${esc(media.card || '')}" width="800" height="450" alt="${esc(ship.name)}" loading="lazy" decoding="async"><span class="name"><b>${esc(ship.name)}</b><small>${shipLabel}</small></span><span class="value">${fmt(entry.price)}<small>aUEC</small></span></div>`;
+  return `<article class="stock-card">
+    <div class="stock-card-media">${image}</div>
+    <div class="stock-card-body">
+      <b class="stock-name">${esc(ship.name)}</b>
+      <small class="stock-sub">${esc(ship.cn)} · ${esc(SC.manuName(ship.maker))}</small>
+      ${specs}
+      <div class="stock-price">${fmt(entry.price)}<small>aUEC</small></div>
+    </div>
+  </article>`;
+}
+
+function stockItems(shop, tab) {
+  if (!shop) return [];
+  if (tab === 'ships') return shop.buy.slice().sort((a, b) => a.price - b.price);
+  if (tab === 'weapons') return shop.weapons.slice().sort((a, b) => a.size - b.size || a.price - b.price);
+  if (tab === 'rent') return shop.rent.slice().sort((a, b) => a.days[0] - b.days[0]);
+  return [];
+}
+
+function stockSizeOf(entry, tab) {
+  if (tab === 'weapons') return entry.size;
+  const ship = SC.shipById(entry.shipId);
+  return ship ? ship.size : null;
 }
 
 function renderStockTools(loc, tab) {
   const host = $('#dialog-stock-tools');
   if (!host) return;
   const shop = SC_SHOPS.locations[loc.id];
-  if (tab !== 'weapons' || !shop || !shop.weapons.length) { host.innerHTML = ''; return; }
-  const sizes = Array.from(new Set(shop.weapons.map((item) => item.size))).sort((a, b) => a - b);
-  const counts = {};
-  shop.weapons.forEach((item) => { counts[item.size] = (counts[item.size] || 0) + 1; });
-  const prices = shop.weapons.map((item) => item.price);
-  host.innerHTML = `<div class="stock-summary"><span>共 <b>${shop.weapons.length}</b> 件</span><span>价格区间 <b>${fmt(Math.min.apply(null, prices))}</b> – <b>${fmt(Math.max.apply(null, prices))}</b> aUEC</span></div>
-    <div class="weapon-sizes" role="group" aria-label="按武器尺寸筛选">
-      <button type="button" class="${state.weaponSize === 'all' ? 'active' : ''}" data-weapon-size="all">全部 <small>${shop.weapons.length}</small></button>
-      ${sizes.map((size) => `<button type="button" class="${String(state.weaponSize) === String(size) ? 'active' : ''}" data-weapon-size="${size}">S${size} <small>${counts[size]}</small></button>`).join('')}
+  const items = stockItems(shop, tab);
+  if (!items.length) { host.innerHTML = ''; return; }
+  const sizes = Array.from(new Set(items.map((entry) => stockSizeOf(entry, tab)).filter(Boolean))).sort();
+  const prices = items.map((entry) => tab === 'rent' ? entry.days[0] : entry.price);
+  const sizeLabel = (size) => tab === 'weapons' ? 'S' + size : (SC.sizes[size] || size);
+  host.innerHTML = `<div class="stock-summary"><span>共 <b>${items.length}</b> 项</span><span>价格区间 <b>${fmt(Math.min.apply(null, prices))}</b> – <b>${fmt(Math.max.apply(null, prices))}</b> aUEC</span></div>
+    <div class="weapon-sizes" role="group" aria-label="按尺寸筛选">
+      <button type="button" class="${state.stockFilter === 'all' ? 'active' : ''}" data-stock-filter="all">全部 <small>${items.length}</small></button>
+      ${sizes.map((size) => `<button type="button" class="${String(state.stockFilter) === String(size) ? 'active' : ''}" data-stock-filter="${esc(size)}">${esc(sizeLabel(size))}</button>`).join('')}
     </div>`;
 }
 
 function renderDialogStock(loc, tab) {
   const shop = SC_SHOPS.locations[loc.id];
   const host = $('#dialog-stock-body');
+  const pager = $('#dialog-stock-pager');
   if (!host) return;
   if (!shop) {
     host.innerHTML = '<div class="dialog-stock-empty">该地点没有商店库存记录。</div>';
+    if (pager) pager.innerHTML = '';
     renderStockTools(loc, tab);
     return;
   }
-  if (tab === 'ships') {
-    host.innerHTML = shop.buy.length ? '<div class="dialog-stock-list">' + shop.buy.map((entry) => stockRow(entry, 'ship')).join('') + '</div>' : '<div class="dialog-stock-empty">暂无飞船出售记录。</div>';
-  } else if (tab === 'weapons') {
-    const sorted = shop.weapons.slice().sort((a, b) => a.size - b.size || a.price - b.price);
-    const list = state.weaponSize === 'all' ? sorted : sorted.filter((entry) => String(entry.size) === String(state.weaponSize));
-    host.innerHTML = list.length ? '<div class="dialog-stock-list">' + list.map((entry) => stockRow(entry, 'weapon')).join('') + '</div>' : '<div class="dialog-stock-empty">该尺寸暂无武器记录。</div>';
-  } else if (tab === 'rent') {
-    host.innerHTML = shop.rent.length ? '<div class="dialog-stock-list">' + shop.rent.map((entry) => stockRow(entry, 'rent')).join('') + '</div>' : '<div class="dialog-stock-empty">暂无租赁记录。</div>';
-  } else {
+  if (tab === 'packages') {
     const p = SC_SHOPS.package;
-    host.innerHTML = p ? `<div class="dialog-stock-list"><div class="dialog-stock-row"><img src="${esc(p.image)}" width="1600" height="900" alt="${esc(p.name)}" loading="lazy" decoding="async"><span class="name"><b>${esc(p.name)}</b><small>${esc(p.includes.join(' · '))}</small></span><span class="value">$${p.priceUSD}<small>官网</small></span></div></div>` : '<div class="dialog-stock-empty">暂无套装记录。</div>';
+    host.innerHTML = p ? `<div class="dialog-stock-list"><article class="stock-card"><div class="stock-card-media"><img src="${esc(p.image)}" width="1600" height="900" alt="${esc(p.name)}" loading="lazy" decoding="async"></div><div class="stock-card-body"><b class="stock-name">${esc(p.name)}</b><small class="stock-sub">RSI 官网商品</small><div class="stock-specs"><span><i>内容</i><b>${esc(p.includes.join(' · '))}</b></span></div><div class="stock-price">$${p.priceUSD}<small>官网</small></div></div></article></div>` : '<div class="dialog-stock-empty">暂无套装记录。</div>';
+    if (pager) pager.innerHTML = '';
+    renderStockTools(loc, tab);
+    return;
+  }
+  const items = stockItems(shop, tab).filter((entry) => state.stockFilter === 'all' || String(stockSizeOf(entry, tab)) === String(state.stockFilter));
+  const pageSize = 4;
+  const pages = Math.max(1, Math.ceil(items.length / pageSize));
+  state.stockPage = Math.min(Math.max(1, state.stockPage), pages);
+  const start = (state.stockPage - 1) * pageSize;
+  const visible = items.slice(start, start + pageSize);
+  host.innerHTML = visible.length
+    ? '<div class="dialog-stock-list">' + visible.map((entry) => stockCard(entry, tab)).join('') + '</div>'
+    : '<div class="dialog-stock-empty">该分类暂无记录。</div>';
+  if (pager) {
+    pager.innerHTML = pages > 1 ? `<div class="stock-pager"><button type="button" data-stock-page="prev" ${state.stockPage <= 1 ? 'disabled' : ''}>上一页</button><span>第 <b>${state.stockPage}</b> / ${pages} 页</span><button type="button" data-stock-page="next" ${state.stockPage >= pages ? 'disabled' : ''}>下一页</button></div>` : `<div class="stock-pager"><span>共 ${items.length} 项</span></div>`;
   }
   renderStockTools(loc, tab);
 }
@@ -1186,10 +1388,13 @@ function openLocation(id, scroll) {
   if (loc.system !== state.system) switchSystem(loc.system, true);
   state.selected = id;
   state.weaponSize = 'all';
+  state.stockPage = 1;
+  state.stockFilter = 'all';
   atlasState.selected = id;
   updateLabelVisibility();
   renderDialog(loc);
   const dialog = $('#location-dialog');
+  document.body.classList.add('drawer-open');
   if (dialog && !dialog.open) {
     if (typeof dialog.showModal === 'function') dialog.showModal();
     else dialog.setAttribute('open', '');
@@ -1246,12 +1451,14 @@ function renderDialog(loc) {
       </div>
       <div id="dialog-stock-tools"></div>
       <div id="dialog-stock-body"></div>
+      <div id="dialog-stock-pager"></div>
       <div class="dialog-note">${shop ? '价格单位：aUEC' : ''}</div>
     </section>`;
   if (shop) renderDialogStock(loc, state.tab);
 }
 
 function closeDialog(clearSelection) {
+  document.body.classList.remove('drawer-open');
   const dialog = $('#location-dialog');
   if (dialog && dialog.open) dialog.close();
   if (clearSelection !== false) {
@@ -1300,16 +1507,24 @@ function init() {
   if (els.dialog) {
     els.dialog.addEventListener('click', (event) => {
       if (event.target.closest('[data-dialog-close]') || event.target === els.dialog) { closeDialog(true); return; }
-      const sizeButton = event.target.closest('[data-weapon-size]');
-      if (sizeButton && state.selected) {
-        state.weaponSize = sizeButton.dataset.weaponSize;
-        renderDialogStock(SC.locationById(state.selected), 'weapons');
+      const filter = event.target.closest('[data-stock-filter]');
+      if (filter && state.selected) {
+        state.stockFilter = filter.dataset.stockFilter;
+        state.stockPage = 1;
+        renderDialogStock(SC.locationById(state.selected), state.tab);
+        return;
+      }
+      const pageButton = event.target.closest('[data-stock-page]');
+      if (pageButton && state.selected) {
+        state.stockPage = Math.max(1, state.stockPage + (pageButton.dataset.stockPage === 'next' ? 1 : -1));
+        renderDialogStock(SC.locationById(state.selected), state.tab);
         return;
       }
       const tab = event.target.closest('[data-dialog-tab]');
       if (tab) {
         state.tab = tab.dataset.dialogTab;
-        if (state.tab !== 'weapons') state.weaponSize = 'all';
+        state.stockPage = 1;
+        state.stockFilter = 'all';
         renderDialog(SC.locationById(state.selected));
       }
     });
@@ -1317,7 +1532,8 @@ function init() {
   }
 
   const params = new URLSearchParams(location.search);
-  const sys = params.get('system') === 'pyro' ? 'pyro' : 'stanton';
+  const sysParam = params.get('system');
+  const sys = ['stanton', 'pyro', 'nyx'].includes(sysParam) ? sysParam : 'stanton';
   state.system = sys;
   $$('[data-system]', els.tabs).forEach((button) => button.classList.toggle('active', button.dataset.system === sys));
   updateCount();

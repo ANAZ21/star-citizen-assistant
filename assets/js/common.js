@@ -589,6 +589,28 @@
     setTimeout(function () { items.forEach(function (el) { el.classList.add("in"); }); }, 1600);
   }
 
+
+  /* 卡片轻微 3D 倾斜与光斑跟随 */
+  SC.bindTilt = function (selector) {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    SC.$$(selector).forEach(function (card) {
+      if (card.__tiltBound) return;
+      card.__tiltBound = true;
+      card.addEventListener('pointermove', function (event) {
+        var rect = card.getBoundingClientRect();
+        var x = (event.clientX - rect.left) / rect.width;
+        var y = (event.clientY - rect.top) / rect.height;
+        card.style.setProperty('--ry', ((x - 0.5) * 5).toFixed(2) + 'deg');
+        card.style.setProperty('--rx', ((0.5 - y) * 4).toFixed(2) + 'deg');
+        card.style.setProperty('--mx', (x * 100).toFixed(1) + '%');
+        card.style.setProperty('--my', (y * 100).toFixed(1) + '%');
+      });
+      card.addEventListener('pointerleave', function () {
+        card.style.setProperty('--ry', '0deg');
+        card.style.setProperty('--rx', '0deg');
+      });
+    });
+  };
   SC.refreshReveal = initReveal;
 
   /* ---------- 启动 ---------- */

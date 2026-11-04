@@ -2624,3 +2624,23 @@ body.starmap-open { overflow: hidden; }
 .gsc-head em { font-size: 12px; }
 .gsr-counts span { font-size: 11px; }
 .shop-row-price small, .rent-values, .rent-days { font-size: 11px; }
+
+/* ship parameter grid */
+.ship-specs { display: grid; grid-template-columns: 1fr 1fr; gap: 7px 14px; margin: 12px 0 0; padding: 12px 0; border-top: 0.5px solid var(--separator); border-bottom: 0.5px solid var(--separator); }
+.ship-specs > div { min-width: 0; }
+.ship-specs > div.wide { grid-column: 1 / -1; }
+.ship-specs dt { color: var(--label-tertiary); font-size: 11px; line-height: 14px; }
+.ship-specs dd { margin: 2px 0 0; color: var(--label); font-size: 13px; line-height: 17px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ship-specs > div.wide dd { white-space: normal; }
+.back-to-top { position: fixed; right: 28px; bottom: 28px; z-index: 60; display: inline-flex; align-items: center; gap: 7px; min-height: 42px; padding: 0 16px; border: 1px solid rgba(255,255,255,.16); border-radius: 999px; background: rgba(28,28,30,.88); color: var(--label); font-size: 13px; box-shadow: 0 14px 40px rgba(0,0,0,.5); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); opacity: 0; pointer-events: none; transform: translateY(8px); transition: opacity .25s var(--ease), transform .25s var(--ease); }
+.back-to-top.show { opacity: 1; pointer-events: auto; transform: none; }
+.back-to-top:hover { border-color: var(--orange); color: var(--orange); }
+
+/* cinematic card tilt + spotlight */
+.ship-card, .place-card { position: relative; transform-style: preserve-3d; transition: transform .35s var(--ease), border-color .3s, box-shadow .35s, background .3s; }
+.ship-card::before, .place-card::before { content: ""; position: absolute; z-index: 6; inset: 0; pointer-events: none; opacity: 0; background: radial-gradient(circle at var(--mx, 50%) var(--my, 50%), rgba(100,210,255,.16), transparent 42%); transition: opacity .3s var(--ease); }
+.ship-card:hover::before, .place-card:hover::before { opacity: 1; }
+.ship-card:hover { transform: translateY(-5px) perspective(1100px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)); box-shadow: 0 26px 60px rgba(0,0,0,.5); }
+.place-card:hover { transform: translateY(-5px) perspective(1100px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)); }
+.stock-card { animation: stock-in .4s var(--ease) both; }
+@keyframes stock-in { from { opacity: 0; transform: translateY(8px) scale(.985); } to { opacity: 1; transform: none; } }

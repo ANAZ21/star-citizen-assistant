@@ -13,7 +13,21 @@
   };
   var els = {};
 
+
+  function initBackToTop() {
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'back-to-top';
+    btn.innerHTML = '回到顶部 ↑';
+    document.body.appendChild(btn);
+    function toggle() { btn.classList.toggle('show', window.scrollY > 700); }
+    window.addEventListener('scroll', toggle, { passive: true });
+    toggle();
+    btn.addEventListener('click', function () { window.scrollTo({ top: 0, behavior: 'smooth' }); });
+  }
+
   function init() {
+    initBackToTop();
     var heroCount = document.getElementById('hero-ship-count');
     if (heroCount) heroCount.textContent = SC.ships.length;
 
@@ -270,9 +284,17 @@
           '<div class="ship-top"><span class="maker">' + SC.escapeHtml(SC.manuName(s.maker)) + '</span></div>' +
           '<h3 class="ship-name">' + SC.escapeHtml(s.name) + (s.cn ? '<span class="cn">' + SC.escapeHtml(s.cn) + '</span>' : '') + '</h3>' +
           '<div class="badges"><span class="badge role">' + SC.escapeHtml(s.role) + '</span><span class="badge">' + sizeLabel(s.size) + '</span><span class="badge ' + status + '">' + s.status + '</span></div>' +
-          '<p class="ship-blurb">' + SC.escapeHtml(SC.shipBlurb(s)) + '</p>' +
           '<div class="ship-availability">' + avail + '</div>' +
-          '<dl class="quick-stats"><div><dt>货舱</dt><dd>' + (s.cargo ? SC.fmtNumber(s.cargo) + ' SCU' : '—') + '</dd></div><div><dt>乘员</dt><dd>' + SC.escapeHtml(s.crew) + '</dd></div><div><dt>最高速度</dt><dd>' + (s.max ? SC.fmtNumber(s.max) + ' m/s' : '—') + '</dd></div></dl>' +
+          '<dl class="ship-specs">' +
+            '<div><dt>货舱</dt><dd>' + (s.cargo ? SC.fmtNumber(s.cargo) + ' SCU' : '—') + '</dd></div>' +
+            '<div><dt>乘员</dt><dd>' + SC.escapeHtml(s.crew) + '</dd></div>' +
+            '<div><dt>SCM</dt><dd>' + (s.scm ? SC.fmtNumber(s.scm) + ' m/s' : '—') + '</dd></div>' +
+            '<div><dt>最高速度</dt><dd>' + (s.max ? SC.fmtNumber(s.max) + ' m/s' : '—') + '</dd></div>' +
+            '<div><dt>护盾</dt><dd>' + SC.escapeHtml(s.shield) + '</dd></div>' +
+            '<div><dt>船体</dt><dd>' + (s.hull ? SC.fmtNumber(s.hull) : '—') + '</dd></div>' +
+            '<div class="wide"><dt>默认武装</dt><dd>' + SC.escapeHtml(s.weapons) + '</dd></div>' +
+            '<div class="wide"><dt>导弹</dt><dd>' + SC.escapeHtml(s.missiles || '—') + '</dd></div>' +
+          '</dl>' +
           '<div class="price-row"><div><span>USD</span><strong>' + SC.fmtUSD(s.usd) + '</strong></div><div class="auec"><span>aUEC</span><strong>' + (minBuy ? SC.fmtNumber(minBuy) : '—') + '</strong></div></div>' +
           '<button class="card-open" type="button" data-action="open">查看档案 ' + SC.icon.arrow + '</button>' +
         '</div>' +
@@ -281,6 +303,7 @@
 
     updateTray();
     if (typeof SC.refreshReveal === 'function') SC.refreshReveal();
+    if (SC.bindTilt) SC.bindTilt('.ship-card');
   }
 
   /* ---------- 收藏 / 对比 ---------- */
@@ -368,9 +391,7 @@
           '</div>' +
         '</div>' +
         '<div class="detail-body">' +
-          '<h4>定位</h4><p>' + SC.escapeHtml(SC.shipBlurb(s)) + '</p>' +
           '<h4>默认武装</h4><p>' + SC.escapeHtml(s.weapons) + (s.missiles && s.missiles !== '—' ? ' · 导弹 ' + SC.escapeHtml(s.missiles) : '') + '</p>' +
-          '<h4>适用场景</h4><p>' + SC.escapeHtml(SC.shipFit(s)) + '</p>' +
           '<h4>购买' + (sh.buy.length ? ' · ' + sh.buy.length + ' 个地点' : '') + '</h4>' +
           (buyRows ? '<div class="shop-rows">' + buyRows + '</div>' : '<p class="muted-line">暂无游戏内购买记录</p>') +
           '<h4>租赁' + (sh.rent.length ? ' · ' + sh.rent.length + ' 个地点' : '') + '</h4>' +

@@ -192,7 +192,7 @@
           '<div class="kicker">System // ' + String(idx + 1).padStart(2, '0') + '</div>' +
           '<h3>' + SC.escapeHtml(system.name) + '<small>' + system.en + '</small></h3>' +
           '<p>' + SC.escapeHtml((window.SC_SYSTEM_COPY && SC_SYSTEM_COPY[system.id]) || system.desc) + '</p>' +
-          '<div class="system-tags"><span>' + locs.filter(function (l) { return l.type === 'station'; }).length + ' 空间站</span><span>' + (system.id === 'pyro' ? '无政府' : 'UEE 管辖') + '</span></div>' +
+          '<div class="system-tags"><span>' + locs.filter(function (l) { return l.type === 'station'; }).length + ' 空间站</span><span>' + (system.id === 'pyro' ? '无政府' : (system.id === 'nyx' ? '无法地带' : 'UEE 管辖')) + '</span></div>' +
           '<span class="system-card-link">打开航图 <span class="arrow">→</span></span>' +
         '</div>' +
       '</a>';

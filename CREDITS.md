@@ -56,8 +56,10 @@
 
 ## 行星与卫星纹理
 
-- 行星与卫星基础纹理基于 Solar System Scope 的 8K 行星素材（CC BY 4.0），本地调色、裁切并转换为 WebP。
-- Hurston 4K 表面基于 Solar System Scope Mars 8K 素材调色生成。
+- 行星与卫星表面纹理从本机 Star Citizen `Data.p4k` 的游戏内 starmap/planet 素材提取，转换为 WebP；版权归 Cloud Imperium Games，仅用于非商业玩家资料展示。
+- Delamar 表面由游戏内 `mount_delamar_a_diff` 材质平铺生成。
+- 恒星表面使用 Solar System Scope 的 8K 太阳素材（CC BY 4.0）调色生成。
+
 
 ## 其他
 
