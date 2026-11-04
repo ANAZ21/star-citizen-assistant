@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>飞船数据库 · MOBIGLAS 星际公民助手</title>
+  <meta name="description" content="星际公民飞船数据库：现金价、aUEC 价、货舱、乘员、速度、护盾、武装与购买地点，支持筛选和三船对比。">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Cpath d='M20 3L34 11v18L20 37 6 29V11L20 3z' fill='%2305080e' stroke='%2363d8ff' stroke-width='2'/%3E%3Ccircle cx='20' cy='20' r='4' fill='%2363d8ff'/%3E%3C/svg%3E">
+  <link rel="preload" as="image" href="assets/img/ships/carrack-hero.webp" fetchpriority="high">
+  <link rel="stylesheet" href="assets/css/site.css?v=20261115">
+</head>
+<body data-page="ships">
+  <header id="site-header"></header>
+
+  <main class="app-main">
+    <section class="ships-hero">
+      <div class="container ships-hero-grid">
+        <div>
+          <div class="kicker">Ship Database</div>
+          <h1 class="large-title">飞船数据库</h1>
+          <p class="page-sub">87 艘飞船，价格、参数、购买地点与租赁方式。</p>
+          <div class="page-meta">
+            <span><b id="hero-ship-count">87</b> 艘飞船</span>
+            <span><b>15</b> 个商店地点</span>
+            <span><b>3</b> 艘并排对比</span>
+          </div>
+        </div>
+        <div class="ships-hero-image">
+          <img src="assets/img/ships/carrack-hero.webp" width="1600" height="900" alt="Carrack 飞船外观" fetchpriority="high" decoding="async">
+          <span>Carrack / Expedition</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" style="padding-top:22px;padding-bottom:0">
+      <div class="container">
+        <div class="ships-toolbar">
+          <div class="ios-search-field" style="flex:1;min-width:220px">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5L21 21"/></svg>
+            <input id="ship-search" type="search" placeholder="搜索船名、制造商、用途" autocomplete="off" aria-label="搜索飞船">
+          </div>
+          <select class="filter-select" id="maker-filter" aria-label="制造商"></select>
+          <select class="filter-select" id="status-filter" aria-label="状态"></select>
+          <select class="filter-select" id="sort-select" aria-label="排序">
+            <option value="default">默认排序</option>
+            <option value="auec-asc">aUEC 从低到高</option>
+            <option value="auec-desc">aUEC 从高到低</option>
+            <option value="usd-asc">美元从低到高</option>
+            <option value="usd-desc">美元从高到低</option>
+            <option value="cargo-desc">货舱从大到小</option>
+            <option value="speed-desc">速度从高到低</option>
+          </select>
+          <button class="chip fav" id="fav-filter" type="button">★ 收藏 <small>0</small></button>
+          <button class="chip" id="shop-filter" type="button">有商店 <small>0</small></button>
+        </div>
+        <div class="filter-row" style="margin-top:8px">
+          <span class="footnote text-secondary" style="flex-shrink:0">用途</span>
+          <div class="segmented-scroll" id="role-chips" style="flex:1"></div>
+        </div>
+        <div class="filter-row" style="margin-top:8px">
+          <span class="footnote text-secondary" style="flex-shrink:0">尺寸</span>
+          <div class="segmented-scroll" id="size-chips" style="flex:1"></div>
+        </div>
+        <div class="results-line">
+          <span id="result-count">共 87 艘 · 当前 87 艘</span>
+          <button class="reset-btn" id="reset-filters" type="button">重置筛选</button>
+        </div>
+        <div class="ship-grid" id="ship-grid"></div>
+      </div>
+    </section>
+  </main>
+
+  <div class="compare-tray" id="compare-tray" aria-label="飞船对比栏">
+    <span class="tray-label">对比 <span id="tray-count">0 / 3</span></span>
+    <div class="tray-chips" id="tray-chips"></div>
+    <div class="tray-actions">
+      <button class="btn-small" id="compare-clear" type="button" disabled>清空</button>
+      <button class="btn-small primary" id="compare-open" type="button" disabled>对比</button>
+    </div>
+  </div>
+
+  <dialog class="modal" id="ship-modal" aria-label="飞船详情">
+    <div class="modal-inner" id="ship-modal-inner"></div>
+  </dialog>
+
+  <dialog class="modal" id="compare-dialog" aria-label="飞船对比">
+    <div class="modal-inner" id="compare-modal-inner"></div>
+  </dialog>
+
+  <footer id="site-footer"></footer>
+
+  <script src="assets/js/data-ships.js"></script>
+  <script src="assets/js/data-locations.js"></script>
+  <script src="assets/js/data-i18n.js?v=20261115"></script>
+  <script src="assets/js/data-media.js"></script>
+  <script src="assets/js/data-shops.js"></script>
+  <script src="assets/js/data-ship-stats.js?v=20261115"></script>
+  <script src="assets/js/data-copy.js?v=20261115"></script>
+  <script src="assets/js/common.js?v=20261115"></script>
+  <script src="assets/js/ships.js?v=20261115"></script>
+</body>
+</html>
