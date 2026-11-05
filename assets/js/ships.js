@@ -255,6 +255,19 @@
       (variant === 'hero' ? 'loading="eager" fetchpriority="high"' : 'loading="lazy"') + ' decoding="async">';
   }
 
+  function loadoutMarkup(ship) {
+    var segments = String(ship.weapons || '').split('·').map(function (part) { return part.trim(); }).filter(Boolean);
+    var cards = segments.map(function (segment) {
+      var match = segment.match(/^(\d+)×\s*(S\d+)\s*(.*)$/i);
+      if (!match) return '<span class="loadout-card"><b>' + SC.escapeHtml(segment) + '</b></span>';
+      return '<span class="loadout-card"><small>' + match[1] + '×</small><b>' + match[2].toUpperCase() + '</b><em>' + SC.escapeHtml(match[3] || '固定') + '</em></span>';
+    });
+    if (ship.missiles && ship.missiles !== '—') {
+      cards.push('<span class="loadout-card missile"><small>导弹</small><b>' + SC.escapeHtml(ship.missiles) + '</b></span>');
+    }
+    return cards.length ? cards.join('') : '<span class="muted-line">暂无武装记录</span>';
+  }
+
   /* ---------- 卡片 ---------- */
   function render() {
     var list = filteredShips();
@@ -296,7 +309,7 @@
             '<div><dt>SCM</dt><dd>' + (s.scm ? SC.fmtNumber(s.scm) + ' m/s' : '—') + '</dd></div>' +
             '<div><dt>最高速度</dt><dd>' + (s.max ? SC.fmtNumber(s.max) + ' m/s' : '—') + '</dd></div>' +
             '<div><dt>护盾</dt><dd>' + SC.escapeHtml(s.shield) + '</dd></div>' +
-            '<div><dt>船体</dt><dd>' + (s.hull ? SC.fmtNumber(s.hull) : '—') + '</dd></div>' +
+            '<div><dt>船体耐久</dt><dd>' + (s.hull ? SC.fmtNumber(s.hull) + ' HP' : '—') + '</dd></div>' +
             '<div class="wide"><dt>默认武装</dt><dd>' + SC.escapeHtml(s.weapons) + '</dd></div>' +
             '<div class="wide"><dt>导弹</dt><dd>' + SC.escapeHtml(s.missiles || '—') + '</dd></div>' +
           '</dl>' +
@@ -395,11 +408,11 @@
             '<div class="stat-cell"><dt>SCM 速度</dt><dd>' + (s.scm ? SC.fmtNumber(s.scm) + ' m/s' : '—') + '</dd></div>' +
             '<div class="stat-cell"><dt>最高速度</dt><dd>' + (s.max ? SC.fmtNumber(s.max) + ' m/s' : '—') + '</dd></div>' +
             '<div class="stat-cell"><dt>护盾</dt><dd>' + SC.escapeHtml(shieldText) + '</dd></div>' +
-            '<div class="stat-cell"><dt>船体</dt><dd>' + (s.hull ? '≈ ' + SC.fmtNumber(s.hull) : '—') + '</dd></div>' +
+            '<div class="stat-cell"><dt>船体耐久</dt><dd>' + (s.hull ? '≈ ' + SC.fmtNumber(s.hull) + ' HP' : '—') + '</dd></div>' +
           '</div>' +
         '</div>' +
         '<div class="detail-body">' +
-          '<h4>默认武装</h4><p>' + SC.escapeHtml(s.weapons) + (s.missiles && s.missiles !== '—' ? ' · 导弹 ' + SC.escapeHtml(s.missiles) : '') + '</p>' +
+          '<h4>默认武装</h4><div class="loadout-panel">' + loadoutMarkup(s) + '</div><p class="hull-note">船体耐久为结构 HP，不含护盾与装甲减伤；实际承受伤害还会受武器伤害类型影响。</p>' +
           '<h4>购买' + (sh.buy.length ? ' · ' + sh.buy.length + ' 个地点' : (s.buy ? ' · 参考购买点' : '')) + '</h4>' +
           (buyRows ? '<div class="shop-rows">' + buyRows + '</div>' : (buyFallback || '<p class="muted-line">暂无游戏内购买记录</p>')) +
           '<h4>租赁' + (sh.rent.length ? ' · ' + sh.rent.length + ' 个地点' : (s.rent ? ' · 参考租赁点' : '')) + '</h4>' +

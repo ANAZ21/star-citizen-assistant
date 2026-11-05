@@ -443,19 +443,10 @@
     if (params.get('q')) { state.q = params.get('q'); els.search.value = state.q; }
 
     initHeroSlides();
-    renderMatrix();
     renderSizes();
     if (SC.syncSelects) SC.syncSelects();
     render();
     if (params.get('component')) setTimeout(function () { openDetail(params.get('component')); }, 80);
-
-    els.matrix.addEventListener('click', function (event) {
-      var button = event.target.closest('[data-matrix-type]');
-      if (!button) return;
-      setType(button.getAttribute('data-matrix-type'));
-      var grid = document.getElementById('component-grid');
-      if (grid) grid.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    });
 
     els.tabs.addEventListener('click', function (event) {
       var button = event.target.closest('[data-type]');

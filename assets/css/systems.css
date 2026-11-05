@@ -558,7 +558,7 @@ body.drawer-open .atlas-focus { display: none; }
 /* fullscreen transition */
 .atlas-stage.is-fullscreen { animation: atlas-full-enter .72s cubic-bezier(.22,1,.36,1) both; }
 @keyframes atlas-full-enter {
-  from { opacity: .45; transform: scale(.93); filter: blur(2px); }
+  from { opacity: 1; transform: scale(.96); filter: blur(1px); }
   to { opacity: 1; transform: none; filter: none; }
 }
 .atlas-stage.is-fullscreen::before {

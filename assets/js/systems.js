@@ -542,16 +542,8 @@ function buildSystem(systemId) {
   prominence.rotation.x = Math.PI / 2.45;
   prominence.rotation.z = 0.25;
   systemGroup.add(prominence);
-  const flare = new THREE.Sprite(new THREE.SpriteMaterial({ map: makeAnamorphicTexture(), color: pyro ? 0xffd0a0 : 0xfff1d0, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0.38 }));
-  flare.scale.set(pyro ? 72 : 64, 8.5, 1);
-  systemGroup.add(flare);
-  const starRays = new THREE.Sprite(new THREE.SpriteMaterial({ map: makeStarRaysTexture(), color: pyro ? 0xff9a6a : 0xffe2b0, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0.18 }));
-  starRays.scale.set(pyro ? 82 : 74, pyro ? 82 : 74, 1);
-  systemGroup.add(starRays);
   systemGroup.userData.starUniforms = starUniforms;
-  systemGroup.userData.starRays = starRays;
   systemGroup.userData.prominence = prominence;
-  systemGroup.userData.flare = flare;
   const starLight = new THREE.PointLight(pyro ? 0xffb07a : 0xffd7a2, 3.8, 0, 0);
   systemGroup.add(starLight);
   systemGroup.userData.star = star;
@@ -1164,17 +1156,11 @@ function animate(t) {
   if (systemGroup && systemGroup.userData.star) {
     systemGroup.userData.star.rotation.y += delta * 0.025;
     if (systemGroup.userData.starUniforms) systemGroup.userData.starUniforms.uTime.value = elapsed;
-    if (systemGroup.userData.starRays) {
-      systemGroup.userData.starRays.material.rotation += delta * 0.012;
-      systemGroup.userData.starRays.material.opacity = 0.16 + Math.sin(elapsed * 0.8) * 0.05;
-    }
     const prominence = systemGroup.userData.prominence;
     if (prominence) {
       prominence.rotation.z += delta * 0.035;
       prominence.material.opacity = 0.24 + Math.sin(elapsed * 1.1) * 0.08;
     }
-    const flare = systemGroup.userData.flare;
-    if (flare) flare.material.opacity = 0.3 + Math.sin(elapsed * 0.7) * 0.08;
   }
   if (systemGroup) {
     systemGroup.children.forEach((obj) => {
