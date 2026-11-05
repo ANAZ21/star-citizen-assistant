@@ -15,6 +15,8 @@
   var heroVisible = 0;
 
   function init() {
+    var homeShipCount = document.getElementById('hero-ship-count-home');
+    if (homeShipCount && window.SC && SC.ships) homeShipCount.textContent = SC.ships.length;
     var componentCount = document.getElementById('hero-component-count');
     if (componentCount && window.SC_COMPONENT_SEARCH) componentCount.textContent = SC_COMPONENT_SEARCH.length;
     initHero();

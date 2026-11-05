@@ -382,7 +382,7 @@
       var comps = (window.SC_COMPONENT_SEARCH || []).filter(function (c) {
         if (!q) return false;
         var label = c.type === 'weapon' && SC.weaponName ? SC.weaponName(c.en) : c.name;
-        var hay = [c.name, c.en, c.manu, SC.manuName(c.manu), c.typeLabel, label].join(' ').toLowerCase();
+        var hay = [c.name, c.en, c.manu, SC.manuName(c.manu), c.typeLabel, c.grade, c.itemClass, c.acquisition, c.sold === false ? '商店无售' : '商店有售', label].join(' ').toLowerCase();
         return hay.indexOf(q) !== -1;
       }).slice(0, 6);
 
@@ -422,9 +422,9 @@
           searchState.items.push({ kind: 'component', id: c.id });
           var label = c.type === 'weapon' && SC.weaponName ? SC.weaponName(c.en) : c.name;
           html += '<button class="search-item' + (i === 0 ? ' active' : '') + '" type="button" data-kind="component" data-id="' + c.id + '">' +
-            '<span class="si-type">' + (c.type === 'weapon' ? 'WEAPON' : 'COMP') + '</span>' +
+            '<span class="si-type">' + (c.type === 'weapon' ? 'WEAPON' : (c.sold === false ? 'UNSOLD' : 'COMP')) + '</span>' +
             '<span class="si-main"><b>' + SC.escapeHtml(label) + '</b>' +
-            '<small>' + SC.escapeHtml(SC.manuName(c.manu)) + ' · ' + SC.escapeHtml(c.typeLabel) + ' · S' + SC.escapeHtml(c.size == null ? '—' : c.size) + '</small></span>' +
+            '<small>' + SC.escapeHtml(SC.manuName(c.manu)) + ' · ' + SC.escapeHtml(c.typeLabel) + ' · S' + SC.escapeHtml(c.size == null ? '—' : c.size) + (c.grade ? ' · ' + SC.escapeHtml(c.grade) + ' 级' : '') + (c.sold === false ? ' · 商店无售' : '') + '</small></span>' +
             '</button>';
         });
       }

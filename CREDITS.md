@@ -63,7 +63,8 @@
 
 ## 其他
 
-- 飞船图片来自 RSI 官网对应飞船页面，版权归 Cloud Imperium Games。
+- 原有 87 艘飞船图片来自 RSI 官网对应飞船页面，版权归 Cloud Imperium Games。
+- 补充的 126 艘舰船数据来自 Star Citizen Wiki API；其中 118 艘图片来自 RSI 官网对应页面，8 艘使用 Star Citizen Wiki 图片作为补充。
 - 字体：Rajdhani、JetBrains Mono，SIL Open Font License 1.1。
 - 星系 2D 预览图来自 Star Citizen Wiki，作者 Astrid，CC BY-SA 4.0。
 

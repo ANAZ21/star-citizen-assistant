@@ -256,3 +256,10 @@ a.component-shop-row:hover { background: rgba(255, 255, 255, .06); }
 
 .component-warning { margin-top: 8px; color: var(--orange); font-size: 11px; line-height: 1.4; }
 .component-shop-row.aggregate { cursor: default; }
+
+.component-acquire { display: flex; gap: 6px; margin-top: 10px; color: var(--label-tertiary); font-size: 10px; line-height: 1.4; }
+.component-acquire i { flex-shrink: 0; color: var(--label-secondary); font-style: normal; }
+.component-no-shop { padding: 10px 6px 4px; color: var(--label-tertiary); font-size: 11px; }
+.component-card.unsold { background: linear-gradient(180deg, rgba(23, 26, 31, .78), rgba(12, 14, 18, .92)); }
+.component-card.unsold .component-acquire span { color: var(--orange); }
+.component-modal-acquire { margin-top: 6px !important; color: var(--orange) !important; font-size: 12px !important; }

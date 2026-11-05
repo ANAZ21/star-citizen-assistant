@@ -12,7 +12,7 @@
   var typeOrder = { power: 0, shield: 1, cooler: 2, quantum: 3, weapon: 4 };
   var PAGE_SIZE = 12;
 
-  var state = { type: 'all', q: '', size: 'all', sort: 'default', page: 1 };
+  var state = { type: 'all', q: '', size: 'all', grade: 'all', itemClass: 'all', sale: 'all', sort: 'default', page: 1 };
   var els = {};
 
   var esc = function (value) {
@@ -138,13 +138,19 @@
     var name = displayName(item);
     var en = item.en && item.en !== name ? '<small>' + esc(item.en) + '</small>' : '';
     var shops = sortedShops(item);
-    return '<article class="component-card reveal" data-component="' + esc(item.id) + '" tabindex="0" style="--i:' + (index % 6) + '">' +
+    var acquire = '<div class="component-acquire"><i>获取</i><span>' + esc(item.acquisition || '无公开获取记录') + '</span></div>';
+    var shopsBlock = shops.length
+      ? '<div class="component-shops">' + shopRows(item, 3) + '</div>'
+      : '';
+    var foot = shops.length
+      ? '<span>' + shops.length + ' 个购买点 · 最低 ' + (item.minPrice == null ? '—' : fmt(item.minPrice, 0) + ' aUEC') + '</span><button class="component-open" type="button" data-open-component="' + esc(item.id) + '">全部购买点 →</button>'
+      : '<span>商店无售</span><button class="component-open" type="button" data-open-component="' + esc(item.id) + '">获取方式 →</button>';
+    return '<article class="component-card reveal' + (shops.length ? '' : ' unsold') + '" data-component="' + esc(item.id) + '" tabindex="0" style="--i:' + (index % 6) + '">' +
       '<div class="component-card-head"><span class="component-type">' + esc(typeLabel(item.type)) + '</span><span class="component-size">S' + esc(item.size == null ? '—' : item.size) + '</span></div>' +
       '<h3 class="component-name">' + esc(name) + en + '</h3>' +
       '<p class="component-maker">' + esc(manuLabel(item.manu)) + ' · ' + esc(itemClass(item)) + (item.grade ? ' · ' + esc(item.grade) + ' 级' : '') + '</p>' +
-      statsMarkup(item) +
-      '<div class="component-shops">' + shopRows(item, 3) + '</div>' +
-      '<div class="component-card-foot"><span>' + shops.length + ' 个购买点 · 最低 ' + (item.minPrice == null ? '—' : fmt(item.minPrice, 0) + ' aUEC') + '</span><button class="component-open" type="button" data-open-component="' + esc(item.id) + '">全部购买点 →</button></div>' +
+      statsMarkup(item) + acquire + shopsBlock +
+      '<div class="component-card-foot">' + foot + '</div>' +
     '</article>';
   }
 
@@ -153,6 +159,10 @@
     var list = items.filter(function (item) {
       if (state.type !== 'all' && item.type !== state.type) return false;
       if (state.size !== 'all' && String(item.size) !== String(state.size)) return false;
+      if (state.grade !== 'all' && item.grade !== state.grade) return false;
+      if (state.itemClass !== 'all' && (item.itemClass || '') !== state.itemClass) return false;
+      if (state.sale === 'sold' && !(item.shops || []).length) return false;
+      if (state.sale === 'unsold' && (item.shops || []).length) return false;
       if (!q) return true;
       var hay = [item.name, item.en, item.manu, manuLabel(item.manu), item.itemClass, classLabel(item.itemClass), typeLabel(item.type)]
         .concat((item.shops || []).map(function (shop) { return [shop.loc, shop.site, shop.shop, shopName(shop.shop)].join(' '); }))
@@ -162,7 +172,7 @@
 
     if (state.sort === 'default') {
       list.sort(function (a, b) {
-        return (typeOrder[a.type] || 0) - (typeOrder[b.type] || 0) || (a.size || 0) - (b.size || 0) || a.name.localeCompare(b.name);
+        return (typeOrder[a.type] || 0) - (typeOrder[b.type] || 0) || (a.size || 0) - (b.size || 0) || ((a.shops || []).length ? 0 : 1) - ((b.shops || []).length ? 0 : 1) || a.name.localeCompare(b.name);
       });
     } else if (state.sort === 'price-asc') {
       list.sort(function (a, b) { return (a.minPrice == null ? Infinity : a.minPrice) - (b.minPrice == null ? Infinity : b.minPrice); });
@@ -209,6 +219,16 @@
       return '<option value="' + size + '">S' + size + '</option>';
     }).join('');
     els.size.value = state.size;
+    var grades = Array.from(new Set(items.map(function (item) { return item.grade; }).filter(Boolean))).sort();
+    els.grade.innerHTML = '<option value="all">全部等级</option>' + grades.map(function (grade) {
+      return '<option value="' + esc(grade) + '">' + esc(grade) + ' 级</option>';
+    }).join('');
+    els.grade.value = state.grade;
+    var classes = Array.from(new Set(items.map(function (item) { return item.itemClass || ''; }))).sort();
+    els.itemClass.innerHTML = '<option value="all">全部级别</option>' + classes.map(function (value) {
+      return '<option value="' + esc(value) + '">' + esc(classLabel(value)) + '</option>';
+    }).join('');
+    els.itemClass.value = state.itemClass;
   }
 
   function pagerMarkup(pages) {
@@ -285,11 +305,12 @@
         '<div class="component-modal-kicker">' + esc(typeLabel(item.type)) + ' / S' + esc(item.size == null ? '—' : item.size) + '</div>' +
         '<h2>' + esc(name) + en + '</h2>' +
         '<p>' + esc(manuLabel(item.manu)) + ' · ' + esc(itemClass(item)) + (item.grade ? ' · ' + esc(item.grade) + ' 级' : '') + '</p>' +
+        '<p class="component-modal-acquire">获取方式：' + esc(item.acquisition || '无公开获取记录') + '</p>' +
       '</div>' +
       statsMarkup(item, true) +
-      '<div class="component-modal-shops-head"><h4>购买点</h4><span>' + shops.length + ' 个购买点 · 按价格排序</span></div>' +
-      '<div class="component-modal-shops">' + allShops + '</div>' +
-      '<p class="component-modal-note">价格为 CStone Universal Item Finder 社区记录，单位 aUEC；DPS 来自 Star Citizen Wiki API。库存、价格与性能可能随版本变动。' + (item.type === 'quantum' ? ' 量子速度按 CStone 原始 DriveSpeed 换算为 km/s。' : '') + (shops.some(isAggregate) ? ' 标记为区域汇总的购买点未在星图中细分到具体站点。' : '') + '</p>';
+      '<div class="component-modal-shops-head"><h4>购买点</h4><span>' + (shops.length ? shops.length + ' 个购买点 · 按价格排序' : '商店无售') + '</span></div>' +
+      '<div class="component-modal-shops">' + (allShops || '<div class="component-no-shop">商店无售，暂无购买点；获取方式见上方。</div>') + '</div>' +
+      '<p class="component-modal-note">价格为 CStone Universal Item Finder 社区记录，单位 aUEC；DPS 与获取方式来自 Star Citizen Wiki API。库存、价格与性能可能随版本变动。' + (item.type === 'quantum' ? ' 量子速度按 CStone 原始 DriveSpeed 换算为 km/s。' : '') + (shops.some(isAggregate) ? ' 标记为区域汇总的购买点未在星图中细分到具体站点。' : '') + '</p>';
 
     els.inner.querySelector('[data-component-close]').addEventListener('click', closeDetail);
     if (!els.dialog.open) {
@@ -313,6 +334,9 @@
     els.pager = document.getElementById('component-pager');
     els.search = document.getElementById('component-search');
     els.size = document.getElementById('component-size-filter');
+    els.grade = document.getElementById('component-grade-filter');
+    els.itemClass = document.getElementById('component-class-filter');
+    els.sale = document.getElementById('component-sale-filter');
     els.sort = document.getElementById('component-sort');
     els.reset = document.getElementById('component-reset');
     els.dialog = document.getElementById('component-dialog');
@@ -361,6 +385,24 @@
       render();
     });
 
+    els.grade.addEventListener('change', function () {
+      state.grade = els.grade.value;
+      state.page = 1;
+      render();
+    });
+
+    els.itemClass.addEventListener('change', function () {
+      state.itemClass = els.itemClass.value;
+      state.page = 1;
+      render();
+    });
+
+    els.sale.addEventListener('change', function () {
+      state.sale = els.sale.value;
+      state.page = 1;
+      render();
+    });
+
     els.sort.addEventListener('change', function () {
       state.sort = els.sort.value;
       state.page = 1;
@@ -368,8 +410,8 @@
     });
 
     els.reset.addEventListener('click', function () {
-      state.type = 'all'; state.q = ''; state.size = 'all'; state.sort = 'default'; state.page = 1;
-      els.search.value = ''; els.size.value = 'all'; els.sort.value = 'default';
+      state.type = 'all'; state.q = ''; state.size = 'all'; state.grade = 'all'; state.itemClass = 'all'; state.sale = 'all'; state.sort = 'default'; state.page = 1;
+      els.search.value = ''; els.size.value = 'all'; els.grade.value = 'all'; els.itemClass.value = 'all'; els.sale.value = 'all'; els.sort.value = 'default';
       if (SC.syncSelects) SC.syncSelects();
       render();
       updateUrl();

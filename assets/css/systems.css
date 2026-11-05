@@ -552,3 +552,5 @@ body.drawer-open .atlas-focus { display: none; }
 .component-type-filter small { margin-left: 3px; color: var(--label-tertiary); font-family: var(--font-num); font-size: 10px; }
 
 .stock-warning { margin: 8px 12px 0; color: var(--orange); font-size: 10px; line-height: 1.4; }
+
+.filter-caption { flex-shrink: 0; padding: 0 4px 0 2px; color: var(--label-tertiary); font-size: 10px; line-height: 28px; }

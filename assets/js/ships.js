@@ -30,6 +30,8 @@
     initBackToTop();
     var heroCount = document.getElementById('hero-ship-count');
     if (heroCount) heroCount.textContent = SC.ships.length;
+    var note = document.getElementById('ship-coverage-note');
+    if (note) note.textContent = '当前收录 ' + SC.ships.length + ' 艘标准可飞与在售舰船，不含活动涂装与特别版。';
 
     els.grid = document.getElementById('ship-grid');
     els.count = document.getElementById('result-count');
@@ -71,7 +73,7 @@
     return SC.ships.filter(function (s) { return size === '全部' || s.size === size; }).length;
   }
   function countAvailable() {
-    return SC.ships.filter(function (s) { var x = shop(s.id); return x.buy.length || x.rent.length; }).length;
+    return SC.ships.filter(function (s) { var x = shop(s.id); return x.buy.length || x.rent.length || s.auec; }).length;
   }
 
   function buildFilterOptions() {
@@ -209,7 +211,7 @@
       if (state.maker && s.maker !== state.maker) return false;
       if (state.status && s.status !== state.status) return false;
       if (state.favOnly && !SC.isFav('ship', s.id)) return false;
-      if (state.shopOnly) { var sh = shop(s.id); if (!sh.buy.length && !sh.rent.length) return false; }
+      if (state.shopOnly) { var sh = shop(s.id); if (!sh.buy.length && !sh.rent.length && !s.auec) return false; }
       if (state.q) {
         var hay = [s.name, s.cn, s.maker, SC.manuName(s.maker), s.role, (s.tags || []).join(' '), SC.shipBlurb(s), SC.shipFit(s), s.buy].join(' ').toLowerCase();
         if (hay.indexOf(state.q) === -1) return false;
@@ -220,7 +222,8 @@
     if (state.sort !== 'default') {
       list = list.slice().sort(function (a, b) {
         var av, bv;
-        var sa = shop(a.id).buy[0], sb = shop(b.id).buy[0];
+        var sa = shop(a.id).buy[0] || (a.auec ? { price: a.auec } : null);
+        var sb = shop(b.id).buy[0] || (b.auec ? { price: b.auec } : null);
         switch (state.sort) {
           case 'auec-asc': av = sa ? sa.price : Infinity; bv = sb ? sb.price : Infinity; break;
           case 'auec-desc': av = sa ? sa.price : -1; bv = sb ? sb.price : -1; break;
@@ -269,9 +272,10 @@
       var fav = SC.isFav('ship', s.id);
       var status = statusClass(s.status);
       var sh = shop(s.id);
-      var minBuy = sh.buy[0] ? sh.buy[0].price : null;
+      var minBuy = sh.buy[0] ? sh.buy[0].price : s.auec;
       var avail = '';
       if (sh.buy.length) avail += '<span class="avail-buy">' + sh.buy.length + ' 地点有售</span>';
+      else if (s.auec) avail += '<span class="avail-buy">游戏内参考价</span>';
       if (sh.rent.length) avail += '<span class="avail-rent">' + sh.rent.length + ' 地点可租</span>';
       if (!avail) avail = '<span>暂无游戏内购买记录</span>';
       return '<article class="ship-card reveal' + (selected ? ' selected' : '') + '" data-id="' + s.id + '" style="--i:' + (i % 6) + '">' +
@@ -283,7 +287,7 @@
         '</div>' +
         '<div class="ship-content">' +
           '<div class="ship-top"><span class="maker">' + SC.escapeHtml(SC.manuName(s.maker)) + '</span></div>' +
-          '<h3 class="ship-name">' + SC.escapeHtml(s.name) + (s.cn ? '<span class="cn">' + SC.escapeHtml(s.cn) + '</span>' : '') + '</h3>' +
+          '<h3 class="ship-name">' + SC.escapeHtml(s.name) + (s.cn && s.cn !== s.name ? '<span class="cn">' + SC.escapeHtml(s.cn) + '</span>' : '') + '</h3>' +
           '<div class="badges"><span class="badge role">' + SC.escapeHtml(s.role) + '</span><span class="badge">' + sizeLabel(s.size) + '</span><span class="badge ' + status + '">' + s.status + '</span></div>' +
           '<div class="ship-availability">' + avail + '</div>' +
           '<dl class="ship-specs">' +
@@ -348,9 +352,10 @@
     var inCompare = state.compare.indexOf(id) !== -1;
     var status = statusClass(s.status);
     var media = SC.shipMedia(id) || {};
-    var minBuy = sh.buy[0] ? sh.buy[0].price : null;
+    var minBuy = sh.buy[0] ? sh.buy[0].price : s.auec;
     var hero = shipImage(s, 'hero');
-    var source = media.source ? '<a class="detail-credit" href="' + SC.escapeHtml(media.source) + '" target="_blank" rel="noopener">图片 © CIG / RSI</a>' : '';
+    var credit = media.credit || 'CIG / RSI';
+    var source = media.source ? '<a class="detail-credit" href="' + SC.escapeHtml(media.source) + '" target="_blank" rel="noopener">图片 © ' + SC.escapeHtml(credit) + '</a>' : '';
     var shieldText = s.shield || '';
     if (s.shieldHp) shieldText = (shieldText && shieldText !== '—' ? shieldText + ' · ' : '') + SC.fmtNumber(s.shieldHp) + ' HP';
     if (!shieldText) shieldText = '—';
@@ -362,6 +367,8 @@
         '<span class="shop-row-price"><b>' + SC.fmtNumber(b.price) + '</b><small>aUEC</small></span>' +
       '</a>';
     }).join('');
+    var buyFallback = (!sh.buy.length && s.buy) ? '<p class="shop-note">参考购买点：' + SC.escapeHtml(s.buy) + (s.auec ? ' · 最低 ' + SC.fmtNumber(s.auec) + ' aUEC' : '') + '</p>' : '';
+    var rentFallback = (!sh.rent.length && s.rent) ? '<p class="shop-note">参考租赁点：' + SC.escapeHtml(s.rent) + '</p>' : '';
     var rentRows = sh.rent.map(function (r) {
       var l = SC.locationById(r.locId) || {};
       return '<a class="shop-row rent" href="systems.html?loc=' + r.locId + '">' +
@@ -374,12 +381,12 @@
       '<button class="modal-close" type="button" aria-label="关闭">' + SC.icon.close + '</button>' +
       '<div class="detail-hero">' + hero + source + '</div>' +
       '<div class="detail-head"><div class="kicker">Ship Dossier // ' + SC.escapeHtml(s.maker).toUpperCase() + '</div>' +
-        '<h2>' + SC.escapeHtml(s.name) + (s.cn ? '<span>' + SC.escapeHtml(s.cn) + '</span>' : '') + '</h2>' +
+        '<h2>' + SC.escapeHtml(s.name) + (s.cn && s.cn !== s.name ? '<span>' + SC.escapeHtml(s.cn) + '</span>' : '') + '</h2>' +
         '<div class="badges"><span class="badge role">' + SC.escapeHtml(s.role) + '</span><span class="badge">' + sizeLabel(s.size) + '</span><span class="badge ' + status + '">' + s.status + '</span>' + (fav ? '<span class="badge limited">已收藏</span>' : '') + '</div>' +
       '</div>' +
       '<div class="detail-layout">' +
         '<div class="detail-price-aside">' +
-          '<div class="detail-price-card"><div><span>USD</span><b>' + SC.fmtUSD(s.usd) + '</b></div><div class="auec"><span>aUEC 商店价</span><b>' + (minBuy ? SC.fmtNumber(minBuy) : '—') + '</b></div></div>' +
+          '<div class="detail-price-card"><div><span>USD</span><b>' + SC.fmtUSD(s.usd) + '</b></div><div class="auec"><span>aUEC 参考价</span><b>' + (minBuy ? SC.fmtNumber(minBuy) : '—') + '</b></div></div>' +
           '<div class="stat-grid">' +
             '<div class="stat-cell"><dt>制造商</dt><dd>' + SC.escapeHtml(SC.manuName(s.maker)) + '</dd></div>' +
             '<div class="stat-cell"><dt>尺寸</dt><dd>' + sizeLabel(s.size) + '</dd></div>' +
@@ -393,10 +400,10 @@
         '</div>' +
         '<div class="detail-body">' +
           '<h4>默认武装</h4><p>' + SC.escapeHtml(s.weapons) + (s.missiles && s.missiles !== '—' ? ' · 导弹 ' + SC.escapeHtml(s.missiles) : '') + '</p>' +
-          '<h4>购买' + (sh.buy.length ? ' · ' + sh.buy.length + ' 个地点' : '') + '</h4>' +
-          (buyRows ? '<div class="shop-rows">' + buyRows + '</div>' : '<p class="muted-line">暂无游戏内购买记录</p>') +
-          '<h4>租赁' + (sh.rent.length ? ' · ' + sh.rent.length + ' 个地点' : '') + '</h4>' +
-          (rentRows ? '<div class="shop-rows">' + rentRows + '</div>' : '<p class="muted-line">暂无可租赁地点</p>') +
+          '<h4>购买' + (sh.buy.length ? ' · ' + sh.buy.length + ' 个地点' : (s.buy ? ' · 参考购买点' : '')) + '</h4>' +
+          (buyRows ? '<div class="shop-rows">' + buyRows + '</div>' : (buyFallback || '<p class="muted-line">暂无游戏内购买记录</p>')) +
+          '<h4>租赁' + (sh.rent.length ? ' · ' + sh.rent.length + ' 个地点' : (s.rent ? ' · 参考租赁点' : '')) + '</h4>' +
+          (rentRows ? '<div class="shop-rows">' + rentRows + '</div>' : (rentFallback || '<p class="muted-line">暂无可租赁地点</p>')) +
         '</div>' +
       '</div>';
 
@@ -418,7 +425,7 @@
   function openCompare() {
     var ships = state.compare.map(SC.shipById).filter(Boolean);
     if (ships.length < 2) return;
-    function minBuy(s) { var b = shop(s.id).buy[0]; return b ? b.price : null; }
+    function minBuy(s) { var b = shop(s.id).buy[0]; return b ? b.price : (s.auec || null); }
     var maxCargo = Math.max.apply(null, ships.map(function (s) { return s.cargo || 0; }));
     var maxSpeed = Math.max.apply(null, ships.map(function (s) { return s.max || 0; }));
     var maxUsd = Math.max.apply(null, ships.map(function (s) { return s.usd || 0; }));
@@ -431,7 +438,7 @@
     rows += row('货舱', ships.map(function (s) { return (s.cargo ? SC.fmtNumber(s.cargo) + ' SCU' : '—') + bar(s.cargo, maxCargo); }));
     rows += row('最高速度', ships.map(function (s) { return (s.max ? SC.fmtNumber(s.max) + ' m/s' : '—') + bar(s.max, maxSpeed); }));
     rows += row('USD', ships.map(function (s) { return SC.fmtUSD(s.usd) + bar(s.usd, maxUsd); }));
-    rows += row('aUEC 商店价', ships.map(function (s) { var v = minBuy(s); return (v ? SC.fmtNumber(v) : '—') + bar(v, maxAuec); }));
+    rows += row('aUEC 参考价', ships.map(function (s) { var v = minBuy(s); return (v ? SC.fmtNumber(v) : '—') + bar(v, maxAuec); }));
     rows += row('护盾 / 船体', ships.map(function (s) {
       var shield = s.shieldHp ? SC.fmtNumber(s.shieldHp) + ' HP' : SC.escapeHtml(s.shield);
       return shield + ' · ' + (s.hull ? '≈ ' + SC.fmtNumber(s.hull) : '—');

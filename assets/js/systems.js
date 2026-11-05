@@ -54,6 +54,8 @@ const state = {
   stockPage: 1,
   stockFilter: 'all',
   componentType: 'all',
+  componentGrade: 'all',
+  componentClass: 'all',
   selected: null
 };
 
@@ -1419,8 +1421,11 @@ function renderStockTools(loc, tab) {
     seenBase[key] = true;
     uniqueBase.push(entry);
   });
-  const scoped = tab === 'components' && state.componentType !== 'all'
-    ? items.filter((entry) => entry.type === state.componentType)
+  const scoped = tab === 'components'
+    ? items.filter((entry) =>
+      (state.componentType === 'all' || entry.type === state.componentType) &&
+      (state.componentGrade === 'all' || entry.grade === state.componentGrade) &&
+      (state.componentClass === 'all' || (entry.itemClass || '') === state.componentClass))
     : items;
   const sizes = Array.from(new Set(scoped.map((entry) => stockSizeOf(entry, tab)).filter((value) => value != null))).sort((a, b) => a - b);
   const prices = scoped.map((entry) => tab === 'rent' ? entry.days[0] : entry.price);
@@ -1434,8 +1439,22 @@ function renderStockTools(loc, tab) {
         ${typeCounts.map(([type, n]) => `<button type="button" class="${state.componentType === type ? 'active' : ''}" data-component-type="${esc(type)}">${esc(componentTypeLabel(type))} <small>${n}</small></button>`).join('')}
       </div>`
     : '';
+  const grades = tab === 'components' ? Array.from(new Set(uniqueBase.map((entry) => entry.grade).filter(Boolean))).sort() : [];
+  const classes = tab === 'components' ? Array.from(new Set(uniqueBase.map((entry) => entry.itemClass || ''))).sort() : [];
+  const gradeFilter = grades.length > 1
+    ? `<div class="component-type-filter" role="group" aria-label="按等级筛选"><span class="filter-caption">等级</span>
+        <button type="button" class="${state.componentGrade === 'all' ? 'active' : ''}" data-component-grade="all">全部</button>
+        ${grades.map((grade) => `<button type="button" class="${state.componentGrade === grade ? 'active' : ''}" data-component-grade="${esc(grade)}">${esc(grade)} 级</button>`).join('')}
+      </div>`
+    : '';
+  const classFilter = classes.length > 1
+    ? `<div class="component-type-filter" role="group" aria-label="按级别筛选"><span class="filter-caption">级别</span>
+        <button type="button" class="${state.componentClass === 'all' ? 'active' : ''}" data-component-class="all">全部</button>
+        ${classes.map((value) => `<button type="button" class="${state.componentClass === value ? 'active' : ''}" data-component-class="${esc(value)}">${esc(componentClassLabel(value))}</button>`).join('')}
+      </div>`
+    : '';
   host.innerHTML = `<div class="stock-summary"><span>共 <b>${scoped.length}</b> 条记录</span><span>价格区间 <b>${fmt(Math.min.apply(null, prices))}</b> – <b>${fmt(Math.max.apply(null, prices))}</b> aUEC</span></div>
-    ${typeFilter}
+    ${typeFilter}${gradeFilter}${classFilter}
     <div class="weapon-sizes" role="group" aria-label="按尺寸筛选">
       <button type="button" class="${state.stockFilter === 'all' ? 'active' : ''}" data-stock-filter="all">全部 <small>${scoped.length}</small></button>
       ${sizes.map((size) => `<button type="button" class="${String(state.stockFilter) === String(size) ? 'active' : ''}" data-stock-filter="${esc(size)}">${esc(sizeLabel(size))}</button>`).join('')}
@@ -1460,9 +1479,13 @@ function renderDialogStock(loc, tab) {
     renderStockTools(loc, tab);
     return;
   }
-  const typed = tab === 'components' && state.componentType !== 'all'
-    ? stockItems(shop, tab).filter((entry) => entry.type === state.componentType)
-    : stockItems(shop, tab);
+  const allTyped = stockItems(shop, tab);
+  const typed = tab === 'components'
+    ? allTyped.filter((entry) =>
+      (state.componentType === 'all' || entry.type === state.componentType) &&
+      (state.componentGrade === 'all' || entry.grade === state.componentGrade) &&
+      (state.componentClass === 'all' || (entry.itemClass || '') === state.componentClass))
+    : allTyped;
   const items = typed.filter((entry) => state.stockFilter === 'all' || String(stockSizeOf(entry, tab)) === String(state.stockFilter));
   const pageSize = 4;
   const pages = Math.max(1, Math.ceil(items.length / pageSize));
@@ -1487,6 +1510,8 @@ function openLocation(id, scroll) {
   state.stockPage = 1;
   state.stockFilter = 'all';
   state.componentType = 'all';
+  state.componentGrade = 'all';
+  state.componentClass = 'all';
   atlasState.selected = id;
   updateLabelVisibility();
   renderDialog(loc);
@@ -1618,6 +1643,22 @@ function init() {
         renderDialogStock(SC.locationById(state.selected), state.tab);
         return;
       }
+      const componentGrade = event.target.closest('[data-component-grade]');
+      if (componentGrade && state.selected) {
+        state.componentGrade = componentGrade.dataset.componentGrade;
+        state.stockPage = 1;
+        state.stockFilter = 'all';
+        renderDialogStock(SC.locationById(state.selected), state.tab);
+        return;
+      }
+      const componentClass = event.target.closest('[data-component-class]');
+      if (componentClass && state.selected) {
+        state.componentClass = componentClass.dataset.componentClass;
+        state.stockPage = 1;
+        state.stockFilter = 'all';
+        renderDialogStock(SC.locationById(state.selected), state.tab);
+        return;
+      }
       const pageButton = event.target.closest('[data-stock-page]');
       if (pageButton && state.selected) {
         state.stockPage = Math.max(1, state.stockPage + (pageButton.dataset.stockPage === 'next' ? 1 : -1));
@@ -1630,6 +1671,8 @@ function init() {
         state.stockPage = 1;
         state.stockFilter = 'all';
         state.componentType = 'all';
+        state.componentGrade = 'all';
+        state.componentClass = 'all';
         renderDialog(SC.locationById(state.selected));
       }
     });
