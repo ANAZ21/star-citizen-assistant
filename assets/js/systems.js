@@ -21,7 +21,7 @@ const componentTypes = componentMeta.types || {};
 const componentClasses = componentMeta.classes || {};
 const componentTypeLabel = (type) => (componentTypes[type] && componentTypes[type].label) || type;
 const componentClassLabel = (value) => componentClasses[value] || value || '';
-const componentOrder = { power: 0, shield: 1, cooler: 2, quantum: 3 };
+const componentOrder = { power: 0, shield: 1, cooler: 2, quantum: 3, weapon: 4, missile: 5, missilelauncher: 6, bomb: 7, radar: 8, fueltank: 9, fuelintake: 10, qig: 11, emp: 12, turret: 13, tractor: 14, mining: 15, salvage: 16 };
 const isShop = (id) => !!(window.SC_SHOPS && SC_SHOPS.locations && SC_SHOPS.locations[id]);
 const shopBuy = (id) => isShop(id) && SC_SHOPS.locations[id].counts.buy > 0;
 const systemById = (id) => SC.systems.find((system) => system.id === id);
@@ -56,6 +56,7 @@ const state = {
   componentType: 'all',
   componentGrade: 'all',
   componentClass: 'all',
+  shipRole: 'all',
   selected: null
 };
 
@@ -139,7 +140,7 @@ function makeCityIconTexture() {
 
 function layoutSystem(systemId) {
   const system = systemById(systemId);
-  const all = SC.locations.filter((loc) => loc.system === systemId);
+  const all = SC.locations.filter((loc) => loc.system === systemId && !(SC.isHiddenLocation && SC.isHiddenLocation(loc.id)));
   const byName = {};
   all.forEach((loc) => { byName[loc.name] = loc; });
   const planets = all.filter((loc) => loc.type === 'planet');
@@ -415,11 +416,63 @@ function makeStationModel(id) {
     addStationMesh(group, new THREE.CylinderGeometry(0.2, 0.2, 0.05, 18), m.glow, [0, 0.2, 0]);
     addStationMesh(group, new THREE.CylinderGeometry(0.015, 0.015, 0.6, 6), m.metal, [0, 0.45, 0]);
   }
-  group.scale.setScalar(0.62);
+  group.scale.setScalar(0.74);
   group.userData.station = true;
   group.userData.id = id;
   group.traverse((child) => { if (child.isMesh) child.userData.id = id; });
   return group;
+}
+
+function makeJumpGateModel(id) {
+  const group = new THREE.Group();
+  const accent = id === 'stanton-pyro-jump' || id === 'pyro-jump' ? 0x8fc7ff : 0xc8d8e8;
+  const metal = new THREE.MeshStandardMaterial({ color: 0x68737e, metalness: 0.86, roughness: 0.28 });
+  const dark = new THREE.MeshStandardMaterial({ color: 0x121920, metalness: 0.7, roughness: 0.4 });
+  const glow = new THREE.MeshBasicMaterial({ color: accent, transparent: true, opacity: 0.65, blending: THREE.AdditiveBlending, depthWrite: false });
+  const add = (geo, mat, pos, rot) => {
+    const mesh = new THREE.Mesh(geo, mat);
+    if (pos) mesh.position.set(pos[0], pos[1], pos[2]);
+    if (rot) mesh.rotation.set(rot[0], rot[1], rot[2]);
+    group.add(mesh);
+    return mesh;
+  };
+  add(new THREE.TorusGeometry(1.12, 0.075, 12, 64), metal);
+  add(new THREE.TorusGeometry(0.92, 0.022, 8, 64), glow);
+  add(new THREE.TorusGeometry(1.36, 0.028, 8, 64), dark, [0, 0, 0], [Math.PI / 2, 0, 0]);
+  for (let i = 0; i < 8; i++) {
+    const a = i / 8 * Math.PI * 2;
+    add(new THREE.BoxGeometry(0.5, 0.035, 0.06), metal, [Math.cos(a) * 1.12, Math.sin(a) * 1.12, 0], [0, 0, a]);
+    add(new THREE.BoxGeometry(0.18, 0.09, 0.06), dark, [Math.cos(a) * 1.34, Math.sin(a) * 1.34, 0], [0, 0, a]);
+  }
+  add(new THREE.CircleGeometry(1.03, 48), new THREE.MeshBasicMaterial({ color: accent, transparent: true, opacity: 0.12, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false }));
+  add(new THREE.RingGeometry(1.03, 1.1, 48), glow);
+  group.scale.setScalar(0.78);
+  group.userData.station = true;
+  group.userData.gate = true;
+  group.userData.id = id;
+  group.traverse((child) => { if (child.isMesh) child.userData.id = id; });
+  return group;
+}
+
+function makeStarRaysTexture() {
+  const canvas = document.createElement('canvas');
+  canvas.width = 512; canvas.height = 512;
+  const ctx = canvas.getContext('2d');
+  ctx.translate(256, 256);
+  for (let i = 0; i < 18; i++) {
+    const angle = i / 18 * Math.PI * 2;
+    const spread = 0.022 + (i % 4) * 0.008;
+    ctx.beginPath();
+    ctx.moveTo(Math.cos(angle - spread) * 46, Math.sin(angle - spread) * 46);
+    ctx.lineTo(Math.cos(angle) * (135 + (i % 5) * 24), Math.sin(angle) * (135 + (i % 5) * 24));
+    ctx.lineTo(Math.cos(angle + spread) * 46, Math.sin(angle + spread) * 46);
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(255,230,190,' + (0.05 + (i % 3) * 0.025) + ')';
+    ctx.fill();
+  }
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  return texture;
 }
 
 function buildSystem(systemId) {
@@ -439,17 +492,27 @@ function buildSystem(systemId) {
   const glowTexture = makeGlowTexture();
   if (!cityIconTexture) cityIconTexture = makeCityIconTexture();
   const pyro = systemId === 'pyro';
+  const starUniforms = { uMap: { value: textures.sun || null }, uTime: { value: 0 } };
   const star = new THREE.Mesh(
-    new THREE.SphereGeometry(2.3, 64, 40),
-    new THREE.MeshBasicMaterial({ map: textures.sun || null, color: pyro ? 0xffb07a : 0xfff4dc })
+    new THREE.SphereGeometry(2.8, 72, 48),
+    new THREE.ShaderMaterial({
+      uniforms: starUniforms,
+      vertexShader: 'varying vec2 vUv; varying vec3 vN; varying vec3 vV; void main(){ vUv=uv; vN=normalize(normalMatrix*normal); vec4 mv=modelViewMatrix*vec4(position,1.0); vV=normalize(-mv.xyz); gl_Position=projectionMatrix*mv; }',
+      fragmentShader: 'uniform sampler2D uMap; uniform float uTime; varying vec2 vUv; varying vec3 vN; varying vec3 vV; void main(){ vec2 uv=vUv; uv.x+=sin(uv.y*34.0+uTime*.12)*0.0007; vec3 base=texture2D(uMap,uv).rgb; float rim=pow(1.0-max(dot(vN,vV),0.0),2.2); vec3 hot=vec3(1.0,.72,.35); vec3 col=base+hot*rim*.6+vec3(.08,.11,.16)*rim; gl_FragColor=vec4(col,1.0); }'
+    })
   );
   systemGroup.add(star);
   const starGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture, color: pyro ? 0xff7a45 : 0xffc26e, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0.82 }));
-  starGlow.scale.set(pyro ? 24 : 22, pyro ? 24 : 22, 1);
+  starGlow.scale.set(pyro ? 32 : 29, pyro ? 32 : 29, 1);
   systemGroup.add(starGlow);
   const corona = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture, color: pyro ? 0xff5a2a : 0xffd28a, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0.24 }));
-  corona.scale.set(36, 36, 1);
+  corona.scale.set(48, 48, 1);
   systemGroup.add(corona);
+  const starRays = new THREE.Sprite(new THREE.SpriteMaterial({ map: makeStarRaysTexture(), color: pyro ? 0xff9a6a : 0xffe2b0, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0.22 }));
+  starRays.scale.set(pyro ? 52 : 46, pyro ? 52 : 46, 1);
+  systemGroup.add(starRays);
+  systemGroup.userData.starUniforms = starUniforms;
+  systemGroup.userData.starRays = starRays;
   const starLight = new THREE.PointLight(pyro ? 0xffb07a : 0xffd7a2, 3.8, 0, 0);
   systemGroup.add(starLight);
   systemGroup.userData.star = star;
@@ -508,6 +571,8 @@ function buildSystem(systemId) {
       );
     } else if (loc.type === 'station') {
       mesh = makeStationModel(loc.id);
+    } else if (loc.type === 'jump') {
+      mesh = makeJumpGateModel(loc.id);
     } else if (loc.type === 'landing') {
       mesh = new THREE.Sprite(new THREE.SpriteMaterial({ map: cityIconTexture, color: 0xffffff, transparent: true, depthWrite: false, depthTest: true }));
       mesh.scale.set(0.72, 0.72, 1);
@@ -548,7 +613,8 @@ function createLabel(node) {
   button.dataset.priority = node.priority;
   const primary = zhName(node.loc);
   const secondary = `${node.loc.name} · ${typeLabel(node.loc.type)}`;
-  button.innerHTML = `<span class="atlas-node-dot">${markerIcon(node.loc.type)}</span><span class="atlas-node-label"><b>${esc(primary)}</b><small>${esc(secondary)}</small></span>`;
+  const dot = node.loc.type === 'planet' ? '' : `<span class="atlas-node-dot">${markerIcon(node.loc.type)}</span>`;
+  button.innerHTML = dot + `<span class="atlas-node-label"><b>${esc(primary)}</b><small>${esc(secondary)}</small></span>`;
   button.addEventListener('click', (event) => {
     event.stopPropagation();
     selectAtlasNode(node.id);
@@ -713,14 +779,14 @@ function loadPlanetDetail(id) {
   const src = PLANET_DETAIL[id];
   if (!src) return;
   if (detailTextures[id]) {
-    setTimeout(() => applyPlanetDetail(id), 900);
+    applyPlanetDetail(id);
     return;
   }
   new THREE.TextureLoader().load(src, (texture) => {
     texture.colorSpace = THREE.SRGBColorSpace;
     texture.anisotropy = renderer ? renderer.capabilities.getMaxAnisotropy() : 1;
     detailTextures[id] = texture;
-    setTimeout(() => applyPlanetDetail(id), 900);
+    applyPlanetDetail(id);
   });
 }
 
@@ -790,7 +856,7 @@ function updateFocusHud() {
     const siteNames = sites.map((item) => zhName(item.loc)).filter(Boolean).join('、');
     const summary = `该行星记录有 ${moons} 颗卫星与 ${sites.length} 个可访问地点${siteNames ? '，主要地点包括' + siteNames : ''}。`;
     const body = story ? story.story.map((paragraph) => `<p>${esc(paragraph)}</p>`).join('') : `<p>${esc(SC.zhText(loc.desc || ''))}</p>`;
-    storyHost.innerHTML = body + `<p class="atlas-focus-summary">${esc(summary)}</p>`;
+    storyHost.innerHTML = body;
   }
   if (sitesHost) {
     sitesHost.innerHTML = sites.length
@@ -869,6 +935,7 @@ function bindAtlas() {
         atlasState.hover = hoverId;
         updateLabelVisibility();
       }
+      canvas.style.cursor = hoverId ? 'pointer' : 'grab';
       return;
     }
     const dx = event.clientX - atlasState.dragging.x;
@@ -908,6 +975,11 @@ function bindAtlas() {
   };
   canvas.addEventListener('pointerup', end);
   canvas.addEventListener('pointercancel', end);
+  canvas.addEventListener('dblclick', (event) => {
+    event.preventDefault();
+    toggleFullscreen();
+  });
+  let fullscreenWheelTimer = null;
   canvas.addEventListener('wheel', (event) => {
     event.preventDefault();
     atlasState.tween = null;
@@ -915,9 +987,23 @@ function bindAtlas() {
     atlasState.distanceGoal = Math.max(range.min, Math.min(range.max, atlasState.distanceGoal * (event.deltaY < 0 ? 0.9 : 1.1)));
     atlasState.auto = false;
     updateAutoButton();
+    if (event.deltaY < 0 && !atlasState.fullscreen && atlasState.distanceGoal < 46) {
+      clearTimeout(fullscreenWheelTimer);
+      fullscreenWheelTimer = setTimeout(() => {
+        if (!atlasState.fullscreen && atlasState.distanceGoal < 50) toggleFullscreen(true);
+      }, 260);
+    }
   }, { passive: false });
 
   const focusHost = $('#atlas-focus');
+  const focusClose = $('[data-atlas-focus-close]');
+  if (focusClose) {
+    focusClose.addEventListener('click', (event) => {
+      event.stopPropagation();
+      leaveFocus();
+      if (atlasState.fullscreen) toggleFullscreen(false);
+    });
+  }
   if (focusHost) {
     focusHost.addEventListener('click', (event) => {
       if (event.target.closest('[data-atlas-focus-close]') || event.target.closest('[data-atlas-focus-back]')) { leaveFocus(); return; }
@@ -1011,6 +1097,11 @@ function animate(t) {
   if (starField) starField.rotation.y += delta * 0.0015;
   if (systemGroup && systemGroup.userData.star) {
     systemGroup.userData.star.rotation.y += delta * 0.025;
+    if (systemGroup.userData.starUniforms) systemGroup.userData.starUniforms.uTime.value = elapsed;
+    if (systemGroup.userData.starRays) {
+      systemGroup.userData.starRays.material.rotation += delta * 0.012;
+      systemGroup.userData.starRays.material.opacity = 0.16 + Math.sin(elapsed * 0.8) * 0.05;
+    }
     const corona = systemGroup.userData.corona;
     if (corona) {
       const pulse = 0.5 + 0.5 * Math.sin(elapsed * 1.4);
@@ -1100,7 +1191,7 @@ function initAtlas() {
 
 /* ---------- location index ---------- */
 function locationSorted(systemId) {
-  return SC.locations.filter((loc) => loc.system === systemId).sort((a, b) => {
+  return SC.locations.filter((loc) => loc.system === systemId && !(SC.isHiddenLocation && SC.isHiddenLocation(loc.id))).sort((a, b) => {
     const feature = (loc) => (loc.type === 'landing' || ['checkmate', 'ruin', 'orbituary'].includes(loc.id)) ? 0 : (isShop(loc.id) ? 1 : 2);
     return feature(a) - feature(b) || a.name.localeCompare(b.name);
   });
@@ -1228,7 +1319,6 @@ function cardMarkup(loc, index) {
     <div class="place-visual">
       ${visual}
       <span class="place-type-chip${risk ? ' risk-d' + loc.danger : ''}">${esc(typeLabel(loc.type))}${risk ? ' · ' + esc(risk) : ''}</span>
-      <span class="place-code">${String(index + 1).padStart(2, '0')}</span>
       <div class="place-visual-title"><h3>${esc(zhName(loc))}</h3><p>${esc(loc.name)} · ${esc(parentLabel(loc))}</p></div>
       ${counts}
     </div>
@@ -1283,13 +1373,16 @@ function switchSystem(id, updateUrl) {
 }
 
 function updateCount() {
-  const count = SC.locations.filter((loc) => loc.system === state.system).length;
+  const count = SC.locations.filter((loc) => loc.system === state.system && !(SC.isHiddenLocation && SC.isHiddenLocation(loc.id))).length;
   const el = $('#atlas-object-count');
   if (el) el.textContent = `${count} 个地点`;
 }
 
 /* ---------- location dialog ---------- */
 function componentSpecs(entry) {
+  if (entry.statLines && entry.statLines.length) {
+    return entry.statLines.slice(0, 4).map((line) => `<span><i>${esc(line.label)}</i><b>${esc(line.value)}</b></span>`).join('');
+  }
   const stats = entry.stats || {};
   const rows = [];
   const add = (label, value, digits) => {
@@ -1341,7 +1434,7 @@ function stockCard(entry, kind) {
     </article>`;
   }
   if (kind === 'component' || kind === 'components') {
-    const site = entry.site ? ` · ${entry.site}` : '';
+    const site = entry.site && entry.site !== entry.shop ? ` · ${entry.site}` : '';
     const klass = entry.type === 'weapon' && SC.weaponType ? SC.weaponType({ name: entry.en || entry.name }) : componentClassLabel(entry.itemClass);
     const warning = entry.type === 'weapon' && entry.stats && !entry.stats.dps ? '<p class="stock-warning">点防御发射器，暂无舰炮 DPS。</p>' : '';
     return `<article class="stock-card component">
@@ -1426,7 +1519,13 @@ function renderStockTools(loc, tab) {
       (state.componentType === 'all' || entry.type === state.componentType) &&
       (state.componentGrade === 'all' || entry.grade === state.componentGrade) &&
       (state.componentClass === 'all' || (entry.itemClass || '') === state.componentClass))
-    : items;
+    : (tab === 'ships' || tab === 'rent'
+      ? items.filter((entry) => {
+        if (state.shipRole === 'all') return true;
+        const ship = SC.shipById(entry.shipId);
+        return ship && SC.primaryRole && SC.primaryRole(ship) === state.shipRole;
+      })
+      : items);
   const sizes = Array.from(new Set(scoped.map((entry) => stockSizeOf(entry, tab)).filter((value) => value != null))).sort((a, b) => a - b);
   const prices = scoped.map((entry) => tab === 'rent' ? entry.days[0] : entry.price);
   const sizeLabel = (size) => tab === 'weapons' || tab === 'components' ? 'S' + size : (SC.sizes[size] || size);
@@ -1441,6 +1540,15 @@ function renderStockTools(loc, tab) {
     : '';
   const grades = tab === 'components' ? Array.from(new Set(uniqueBase.map((entry) => entry.grade).filter(Boolean))).sort() : [];
   const classes = tab === 'components' ? Array.from(new Set(uniqueBase.map((entry) => entry.itemClass || ''))).sort() : [];
+  const shipRoles = (tab === 'ships' || tab === 'rent')
+    ? Array.from(new Set(uniqueBase.map((entry) => { const ship = SC.shipById(entry.shipId); return ship && SC.primaryRole ? SC.primaryRole(ship) : null; }).filter(Boolean))).sort()
+    : [];
+  const shipRoleFilter = shipRoles.length > 1
+    ? `<div class="component-type-filter" role="group" aria-label="按用途筛选">
+        <button type="button" class="${state.shipRole === 'all' ? 'active' : ''}" data-ship-role="all">全部用途 <small>${uniqueBase.length}</small></button>
+        ${shipRoles.map((role) => `<button type="button" class="${state.shipRole === role ? 'active' : ''}" data-ship-role="${esc(role)}">${esc(role)} <small>${uniqueBase.filter((entry) => { const ship = SC.shipById(entry.shipId); return ship && SC.primaryRole && SC.primaryRole(ship) === role; }).length}</small></button>`).join('')}
+      </div>`
+    : '';
   const gradeFilter = grades.length > 1
     ? `<div class="component-type-filter" role="group" aria-label="按等级筛选"><span class="filter-caption">等级</span>
         <button type="button" class="${state.componentGrade === 'all' ? 'active' : ''}" data-component-grade="all">全部</button>
@@ -1454,7 +1562,7 @@ function renderStockTools(loc, tab) {
       </div>`
     : '';
   host.innerHTML = `<div class="stock-summary"><span>共 <b>${scoped.length}</b> 条记录</span><span>价格区间 <b>${fmt(Math.min.apply(null, prices))}</b> – <b>${fmt(Math.max.apply(null, prices))}</b> aUEC</span></div>
-    ${typeFilter}${gradeFilter}${classFilter}
+    ${shipRoleFilter}${typeFilter}${gradeFilter}${classFilter}
     <div class="weapon-sizes" role="group" aria-label="按尺寸筛选">
       <button type="button" class="${state.stockFilter === 'all' ? 'active' : ''}" data-stock-filter="all">全部 <small>${scoped.length}</small></button>
       ${sizes.map((size) => `<button type="button" class="${String(state.stockFilter) === String(size) ? 'active' : ''}" data-stock-filter="${esc(size)}">${esc(sizeLabel(size))}</button>`).join('')}
@@ -1485,15 +1593,30 @@ function renderDialogStock(loc, tab) {
       (state.componentType === 'all' || entry.type === state.componentType) &&
       (state.componentGrade === 'all' || entry.grade === state.componentGrade) &&
       (state.componentClass === 'all' || (entry.itemClass || '') === state.componentClass))
-    : allTyped;
+    : ((tab === 'ships' || tab === 'rent')
+      ? allTyped.filter((entry) => {
+        if (state.shipRole === 'all') return true;
+        const ship = SC.shipById(entry.shipId);
+        return ship && SC.primaryRole && SC.primaryRole(ship) === state.shipRole;
+      })
+      : allTyped);
   const items = typed.filter((entry) => state.stockFilter === 'all' || String(stockSizeOf(entry, tab)) === String(state.stockFilter));
   const pageSize = 4;
   const pages = Math.max(1, Math.ceil(items.length / pageSize));
   state.stockPage = Math.min(Math.max(1, state.stockPage), pages);
   const start = (state.stockPage - 1) * pageSize;
   const visible = items.slice(start, start + pageSize);
+  let listHtml = '';
+  let lastType = '';
+  visible.forEach((entry) => {
+    if (tab === 'components' && entry.type !== lastType) {
+      listHtml += `<div class="component-group-title"><span>${esc(componentTypeLabel(entry.type))}</span><small>${items.filter((item) => item.type === entry.type).length}</small></div>`;
+      lastType = entry.type;
+    }
+    listHtml += stockCard(entry, tab);
+  });
   host.innerHTML = visible.length
-    ? '<div class="dialog-stock-list">' + visible.map((entry) => stockCard(entry, tab)).join('') + '</div>'
+    ? '<div class="dialog-stock-list">' + listHtml + '</div>'
     : '<div class="dialog-stock-empty">该分类暂无记录。</div>';
   if (pager) {
     pager.innerHTML = pages > 1 ? `<div class="stock-pager"><button type="button" data-stock-page="prev" ${state.stockPage <= 1 ? 'disabled' : ''}>上一页</button><span>第 <b>${state.stockPage}</b> / ${pages} 页</span><button type="button" data-stock-page="next" ${state.stockPage >= pages ? 'disabled' : ''}>下一页</button></div>` : `<div class="stock-pager"><span>共 ${items.length} 项</span></div>`;
@@ -1512,6 +1635,7 @@ function openLocation(id, scroll) {
   state.componentType = 'all';
   state.componentGrade = 'all';
   state.componentClass = 'all';
+  state.shipRole = 'all';
   atlasState.selected = id;
   updateLabelVisibility();
   renderDialog(loc);
@@ -1643,6 +1767,14 @@ function init() {
         renderDialogStock(SC.locationById(state.selected), state.tab);
         return;
       }
+      const shipRole = event.target.closest('[data-ship-role]');
+      if (shipRole && state.selected) {
+        state.shipRole = shipRole.dataset.shipRole;
+        state.stockPage = 1;
+        state.stockFilter = 'all';
+        renderDialogStock(SC.locationById(state.selected), state.tab);
+        return;
+      }
       const componentGrade = event.target.closest('[data-component-grade]');
       if (componentGrade && state.selected) {
         state.componentGrade = componentGrade.dataset.componentGrade;
@@ -1673,6 +1805,7 @@ function init() {
         state.componentType = 'all';
         state.componentGrade = 'all';
         state.componentClass = 'all';
+        state.shipRole = 'all';
         renderDialog(SC.locationById(state.selected));
       }
     });

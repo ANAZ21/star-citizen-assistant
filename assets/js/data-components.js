@@ -2,7 +2,7 @@
 window.SC_COMPONENT_META = {
   "types": {
     "power": {
-      "label": "动力装置",
+      "label": "发电机",
       "en": "Power Plant"
     },
     "shield": {
@@ -14,7 +14,7 @@ window.SC_COMPONENT_META = {
       "en": "Cooler"
     },
     "quantum": {
-      "label": "量子引擎",
+      "label": "量子驱动器",
       "en": "Quantum Drive"
     },
     "weapon": {

@@ -111,7 +111,7 @@
   function renderStats() {
     var shops = (window.SC_SHOPS && SC_SHOPS.locations) ? Object.keys(SC_SHOPS.locations).length : 0;
     document.getElementById('stat-ships').textContent = SC.ships.length;
-    document.getElementById('stat-locations').textContent = SC.locations.length;
+    document.getElementById('stat-locations').textContent = SC.visibleLocations ? SC.visibleLocations().length : SC.locations.length;
     document.getElementById('stat-systems').textContent = SC.systems.length;
     document.getElementById('stat-shops').textContent = shops;
   }

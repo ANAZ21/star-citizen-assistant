@@ -6,6 +6,9 @@
   'use strict';
 
   window.SC = window.SC || {};
+  SC.hiddenLocations = ['ghost-hollow', 'jumptown'];
+  SC.isHiddenLocation = function (id) { return (SC.hiddenLocations || []).indexOf(id) !== -1; };
+  SC.visibleLocations = function () { return (SC.locations || []).filter(function (loc) { return !SC.isHiddenLocation(loc.id); }); };
 
   SC.$ = function (sel, root) { return (root || document).querySelector(sel); };
   SC.$$ = function (sel, root) { return Array.prototype.slice.call((root || document).querySelectorAll(sel)); };
@@ -373,7 +376,8 @@
       }).slice(0, q ? 7 : 4);
 
       var locs = SC.locations.filter(function (l) {
-        if (!q) return ['area18', 'new-babbage', 'grim-hex', 'checkmate', 'jumptown', 'pyro-i'].indexOf(l.id) !== -1;
+        if (SC.isHiddenLocation && SC.isHiddenLocation(l.id)) return false;
+        if (!q) return ['area18', 'new-babbage', 'grim-hex', 'checkmate', 'yela', 'pyro-i'].indexOf(l.id) !== -1;
         var story = window.SC_STORIES && SC_STORIES[l.id];
         var hay = [l.name, l.cn, SC.zhName(l), l.parent, SC.zhParent(l.parent), l.desc, story && story.tagline, SC.typeLabels[l.type], (SC.systemById(l.system) || {}).name].join(' ').toLowerCase();
         return hay.indexOf(q) !== -1;

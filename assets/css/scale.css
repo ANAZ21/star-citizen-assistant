@@ -1,0 +1,87 @@
+/* Global desktop scale pass: larger canvas, type and controls. */
+:root {
+  --maxw: 1480px;
+  --pad: 36px;
+  --nav-h: 52px;
+}
+body {
+  font-size: 19px;
+  line-height: 1.45;
+}
+.kicker { display: none !important; }
+.large-title { font-size: clamp(42px, 4.5vw, 68px); line-height: 1.06; }
+.section-title { font-size: 32px; line-height: 38px; }
+.page-sub { font-size: 17px; line-height: 1.6; }
+.page-meta { font-size: 13px; line-height: 1.4; gap: 10px 24px; }
+.ios-nav-link { font-size: 15px; }
+.ios-nav-title { font-size: 14px; }
+.ios-search-btn { font-size: 15px; }
+.btn, .chip, .filter-select, .reset-btn { min-height: 40px; font-size: 15px; }
+.filter-select { height: 40px; padding-left: 14px; padding-right: 38px; }
+.ios-search-field { height: 44px; }
+.ios-search-field input { font-size: 15px; }
+.ship-name { font-size: 27px; line-height: 1.15; }
+.ship-specs dt { font-size: 12px; }
+.ship-specs dd { font-size: 14px; }
+.price-row strong { font-size: 23px; }
+.card-open { min-height: 44px; font-size: 16px; }
+.place-visual-title h3 { font-size: 27px; }
+.place-card.feature .place-visual-title h3 { font-size: 44px; }
+.place-tagline { font-size: 12px; line-height: 1.6; }
+.place-body { padding: 15px 16px 14px; }
+.place-stock-line { font-size: 11px; }
+.place-foot { font-size: 11px; }
+.location-dialog { width: min(760px, 64vw); }
+.dialog-title { font-size: 40px; }
+.dialog-story p { font-size: 14px; line-height: 1.8; }
+.dialog-side h4 { font-size: 16px; }
+.dialog-facts b { font-size: 18px; }
+.dialog-services span { font-size: 12px; }
+.dialog-stock-head h3 { font-size: 30px; }
+.dialog-stock-tabs button { min-height: 36px; font-size: 14px; }
+.stock-summary { font-size: 12px; }
+.stock-name { font-size: 18px; }
+.stock-sub { font-size: 12px; }
+.stock-specs b { font-size: 13px; }
+.stock-specs i { font-size: 11px; }
+.stock-price { font-size: 22px; }
+.atlas-focus { width: min(500px, calc(52% - 24px)); }
+.atlas-focus-copy b { font-size: 30px; }
+.atlas-focus-story p { font-size: 13px; line-height: 1.8; }
+.atlas-focus-sites button b { font-size: 12px; }
+.atlas-focus-sites button small { font-size: 9px; }
+.atlas-focus-actions button { min-height: 34px; font-size: 11px; }
+.atlas-stage.is-fullscreen .atlas-focus { width: min(680px, 44vw); }
+.components-hero .page-sub { font-size: 17px; }
+.component-name { font-size: 25px; }
+.component-maker { font-size: 14px; }
+.component-stats b { font-size: 18px; }
+.component-stats i { font-size: 12px; }
+.component-shop-place b { font-size: 13px; }
+.component-shop-place small { font-size: 12px; }
+.component-shop-price b { font-size: 17px; }
+.component-card-foot { font-size: 12px; }
+.component-type-tabs button { min-height: 40px; font-size: 14px; }
+.component-type-tabs small { font-size: 13px; }
+.results-line { font-size: 13px; }
+@media (max-width: 1200px) {
+  :root { --maxw: 1180px; --pad: 30px; }
+  body { font-size: 18px; }
+  .large-title { font-size: clamp(38px, 4.6vw, 52px); }
+  .location-dialog { width: min(720px, 66vw); }
+}
+.atlas-focus-copy span { font-size: 10px; }
+.atlas-focus-copy small { font-size: 12px; }
+.atlas-focus-stats span { font-size: 10px; }
+.atlas-focus-story p { font-size: 13px; }
+.atlas-focus-sites button b { font-size: 12px; }
+.atlas-focus-sites button small { font-size: 10px; }
+.atlas-focus-actions button { font-size: 11px; }
+.atlas-hint { font-size: 10px; }
+.atlas-tabs small { font-size: 9px; }
+.place-type-chip { font-size: 9px; }
+.place-stock-line span { font-size: 9px; }
+.dialog-note { font-size: 10px; }
+.dialog-kicker { font-size: 11px; }
+.dialog-zh { font-size: 13px; }
+.place-foot { font-size: 11px; }

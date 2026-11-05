@@ -9,10 +9,11 @@
 
   var meta = window.SC_COMPONENT_META || { types: {}, classes: {}, manufacturers: {} };
   var items = window.SC_COMPONENTS || [];
-  var typeOrder = { power: 0, shield: 1, cooler: 2, quantum: 3, weapon: 4 };
+  var typeOrder = { power: 0, shield: 1, cooler: 2, quantum: 3, weapon: 4, missile: 5, missilelauncher: 6, bomb: 7, radar: 8, fueltank: 9, fuelintake: 10, qig: 11, emp: 12, turret: 13, tractor: 14, mining: 15, salvage: 16 };
+  var typeKeys = ['power', 'shield', 'cooler', 'quantum', 'weapon', 'missile', 'missilelauncher', 'bomb', 'radar', 'fueltank', 'fuelintake', 'qig', 'emp', 'turret', 'tractor', 'mining', 'salvage'];
   var PAGE_SIZE = 12;
 
-  var state = { type: 'all', q: '', size: 'all', grade: 'all', itemClass: 'all', sale: 'all', sort: 'default', page: 1 };
+  var state = { type: 'all', q: '', size: 'all', grade: 'all', itemClass: 'all', sale: 'all', weaponKind: 'all', sort: 'default', page: 1 };
   var els = {};
 
   var esc = function (value) {
@@ -52,6 +53,18 @@
   var itemClass = function (item) {
     return item.type === 'weapon' ? weaponClass(item) : classLabel(item.itemClass);
   };
+  var weaponKinds = ['实弹', '能量', '激光', '畸变', '电磁', '电浆', '点防御', '导弹/鱼雷', '导弹发射器', '炸弹'];
+  var weaponKind = function (item) {
+    if (item.type === 'missile') return '导弹/鱼雷';
+    if (item.type === 'missilelauncher') return '导弹发射器';
+    if (item.type === 'bomb') return '炸弹';
+    var type = item.type === 'weapon' && SC.weaponType ? SC.weaponType({ name: item.en || item.name }) : '';
+    for (var i = 0; i < weaponKinds.length; i++) if (type.indexOf(weaponKinds[i]) !== -1) return weaponKinds[i];
+    if (/Pepperbox/i.test(item.en || '')) return '点防御';
+    if (type && ['加农炮', '速射炮', '霰弹炮', '炮塔'].indexOf(type) === -1) return type;
+    return '其他';
+  };
+  var weaponTypes = { weapon: 1, missile: 1, missilelauncher: 1, bomb: 1 };
 
   function shopLine(shop) {
     var place = shop.loc || locationName(shop.locId) || '未知地点';
@@ -60,6 +73,7 @@
   }
 
   function statRows(item) {
+    if (item.statLines && item.statLines.length) return item.statLines.map(function (line) { return { label: line.label, value: line.value }; });
     var s = item.stats || {};
     var rows = [];
     var add = function (label, value, suffix, digits) {
@@ -163,6 +177,7 @@
       if (state.itemClass !== 'all' && (item.itemClass || '') !== state.itemClass) return false;
       if (state.sale === 'sold' && !(item.shops || []).length) return false;
       if (state.sale === 'unsold' && (item.shops || []).length) return false;
+      if (weaponTypes[state.type] && state.weaponKind !== 'all' && weaponKind(item) !== state.weaponKind) return false;
       if (!q) return true;
       var hay = [item.name, item.en, item.manu, manuLabel(item.manu), item.itemClass, classLabel(item.itemClass), typeLabel(item.type)]
         .concat((item.shops || []).map(function (shop) { return [shop.loc, shop.site, shop.shop, shopName(shop.shop)].join(' '); }))
@@ -182,6 +197,12 @@
       list.sort(function (a, b) { return (a.size || 0) - (b.size || 0) || a.name.localeCompare(b.name); });
     } else if (state.sort === 'name') {
       list.sort(function (a, b) { return a.name.localeCompare(b.name); });
+    } else if (state.sort === 'dps-desc') {
+      list.sort(function (a, b) {
+        var da = (a.stats && a.stats.dps) || 0;
+        var dbb = (b.stats && b.stats.dps) || 0;
+        return dbb - da;
+      });
     }
     return list;
   }
@@ -203,7 +224,7 @@
 
   function renderTypeTabs() {
     if (!els.tabs) return;
-    var defs = [['all', '全部', items.length]].concat(['power', 'shield', 'cooler', 'quantum', 'weapon'].map(function (type) {
+    var defs = [['all', '全部', items.length]].concat(typeKeys.filter(function (type) { return items.some(function (item) { return item.type === type; }); }).map(function (type) {
       return [type, typeLabel(type), items.filter(function (item) { return item.type === type; }).length];
     }));
     els.tabs.innerHTML = defs.map(function (def) {
@@ -229,6 +250,27 @@
       return '<option value="' + esc(value) + '">' + esc(classLabel(value)) + '</option>';
     }).join('');
     els.itemClass.value = state.itemClass;
+    if (els.weaponType) {
+      var weaponSource = weaponTypes[state.type] ? items.filter(function (item) { return item.type === state.type; }) : items.filter(function (item) { return weaponTypes[item.type]; });
+      var kinds = Array.from(new Set(weaponSource.map(weaponKind))).sort();
+      els.weaponType.innerHTML = '<option value="all">全部武器类型</option>' + kinds.map(function (kind) {
+        return '<option value="' + esc(kind) + '">' + esc(kind) + '</option>';
+      }).join('');
+      els.weaponType.value = state.weaponKind;
+    }
+  }
+
+  function syncFilterVisibility() {
+    var isWeapon = !!weaponTypes[state.type];
+    [els.grade, els.itemClass, els.sale].forEach(function (select) {
+      if (!select) return;
+      var wrap = select.closest('.sc-select');
+      if (wrap) wrap.hidden = isWeapon;
+    });
+    if (els.weaponType) {
+      var wrap = els.weaponType.closest('.sc-select');
+      if (wrap) wrap.hidden = !isWeapon;
+    }
   }
 
   function pagerMarkup(pages) {
@@ -260,10 +302,20 @@
     if (!visible.length) {
       els.grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><b>没有匹配的配件</b>调整类别、尺寸或搜索词。</div>';
     } else {
-      els.grid.innerHTML = visible.map(cardMarkup).join('');
+      var lastType = '';
+      var cards = [];
+      visible.forEach(function (item, index) {
+        if (item.type !== lastType) {
+          cards.push('<div class="component-group-title"><span>' + esc(typeLabel(item.type)) + '</span><small>' + items.filter(function (entry) { return entry.type === item.type; }).length + '</small></div>');
+          lastType = item.type;
+        }
+        cards.push(cardMarkup(item, index));
+      });
+      els.grid.innerHTML = cards.join('');
     }
     els.pager.innerHTML = pagerMarkup(pages);
     renderTypeTabs();
+    syncFilterVisibility();
     if (SC.refreshReveal) SC.refreshReveal();
     if (SC.bindTilt) SC.bindTilt('.component-card');
   }
@@ -271,6 +323,16 @@
   function setType(type) {
     state.type = type;
     state.page = 1;
+    if (weaponTypes[type]) {
+      state.grade = 'all'; state.itemClass = 'all'; state.sale = 'all';
+      if (els.grade) els.grade.value = 'all';
+      if (els.itemClass) els.itemClass.value = 'all';
+      if (els.sale) els.sale.value = 'all';
+    } else {
+      state.weaponKind = 'all';
+      if (els.weaponType) els.weaponType.value = 'all';
+    }
+    renderSizes();
     render();
   }
 
@@ -337,6 +399,7 @@
     els.grade = document.getElementById('component-grade-filter');
     els.itemClass = document.getElementById('component-class-filter');
     els.sale = document.getElementById('component-sale-filter');
+    els.weaponType = document.getElementById('component-weapon-type-filter');
     els.sort = document.getElementById('component-sort');
     els.reset = document.getElementById('component-reset');
     els.dialog = document.getElementById('component-dialog');
@@ -346,6 +409,8 @@
     var heroShops = document.getElementById('component-hero-shops');
     if (heroCount) heroCount.textContent = items.length;
     if (heroShops) heroShops.textContent = items.reduce(function (sum, item) { return sum + item.shops.length; }, 0).toLocaleString('en-US');
+    var typeCount = document.getElementById('component-type-count');
+    if (typeCount) typeCount.textContent = Object.keys(meta.types || {}).filter(function (type) { return items.some(function (item) { return item.type === type; }); }).length;
 
     var params = new URLSearchParams(window.location.search);
     if (params.get('type') && (params.get('type') === 'all' || meta.types[params.get('type')])) state.type = params.get('type');
@@ -403,6 +468,12 @@
       render();
     });
 
+    if (els.weaponType) els.weaponType.addEventListener('change', function () {
+      state.weaponKind = els.weaponType.value;
+      state.page = 1;
+      render();
+    });
+
     els.sort.addEventListener('change', function () {
       state.sort = els.sort.value;
       state.page = 1;
@@ -410,8 +481,8 @@
     });
 
     els.reset.addEventListener('click', function () {
-      state.type = 'all'; state.q = ''; state.size = 'all'; state.grade = 'all'; state.itemClass = 'all'; state.sale = 'all'; state.sort = 'default'; state.page = 1;
-      els.search.value = ''; els.size.value = 'all'; els.grade.value = 'all'; els.itemClass.value = 'all'; els.sale.value = 'all'; els.sort.value = 'default';
+      state.type = 'all'; state.q = ''; state.size = 'all'; state.grade = 'all'; state.itemClass = 'all'; state.sale = 'all'; state.weaponKind = 'all'; state.sort = 'default'; state.page = 1;
+      els.search.value = ''; els.size.value = 'all'; els.grade.value = 'all'; els.itemClass.value = 'all'; els.sale.value = 'all'; if (els.weaponType) els.weaponType.value = 'all'; els.sort.value = 'default';
       if (SC.syncSelects) SC.syncSelects();
       render();
       updateUrl();
