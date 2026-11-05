@@ -107,7 +107,7 @@ body[data-page="systems"] .app-main { padding-bottom: 0; }
   animation: focus-in .45s var(--ease) both;
 }
 @keyframes focus-in { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
-.atlas-focus[hidden] { display: none; }
+.atlas-focus[hidden] { display: none !important; }
 .atlas-focus-copy { display: flex; flex-direction: column; gap: 3px; }
 .atlas-focus-copy span { color: var(--cyan); font-family: var(--font-mono); font-size: 7px; letter-spacing: .12em; }
 .atlas-focus-copy b { margin-top: 5px; font-family: var(--font); font-size: 26px; line-height: 1.1; font-weight: 600; letter-spacing: -.02em; }
