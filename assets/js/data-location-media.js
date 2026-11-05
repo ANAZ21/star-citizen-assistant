@@ -158,8 +158,8 @@ window.SC_LOCATION_MEDIA = {
   },
   "pyro-gateway": {
     "card": "assets/img/locations/pyro-gateway.webp",
-    "source": "https://media.starcitizen.tools/thumb/d/dd/Prospector_-_Hovering_mining_on_cliffside_1.jpg/1600px-Prospector_-_Hovering_mining_on_cliffside_1.jpg.webp?kge4o",
-    "page": "Prospector",
+    "source": "https://media.starcitizen.tools/thumb/c/cc/Pyro_Gateway%2C_Stanton_System.jpg/1600px-Pyro_Gateway%2C_Stanton_System.jpg.webp?fr8er",
+    "page": "Pyro Gateway (Stanton)",
     "fallback": false
   },
   "terra-gateway": {

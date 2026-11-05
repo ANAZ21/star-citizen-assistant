@@ -152,6 +152,8 @@
     var name = displayName(item);
     var en = item.en && item.en !== name ? '<small>' + esc(item.en) + '</small>' : '';
     var shops = sortedShops(item);
+    var media = SC.componentMedia ? SC.componentMedia(item.id) : null;
+    var mediaHtml = media && media.card ? '<div class="component-card-media"><img src="' + esc(media.card) + '" alt="' + esc(name) + '" loading="lazy" decoding="async"></div>' : '';
     var acquire = '<div class="component-acquire"><i>获取</i><span>' + esc(item.acquisition || '无公开获取记录') + '</span></div>';
     var shopsBlock = shops.length
       ? '<div class="component-shops">' + shopRows(item, 3) + '</div>'
@@ -160,6 +162,7 @@
       ? '<span>' + shops.length + ' 个购买点 · 最低 ' + (item.minPrice == null ? '—' : fmt(item.minPrice, 0) + ' aUEC') + '</span><button class="component-open" type="button" data-open-component="' + esc(item.id) + '">全部购买点 →</button>'
       : '<span>商店无售</span><button class="component-open" type="button" data-open-component="' + esc(item.id) + '">获取方式 →</button>';
     return '<article class="component-card reveal' + (shops.length ? '' : ' unsold') + '" data-component="' + esc(item.id) + '" tabindex="0" style="--i:' + (index % 6) + '">' +
+      mediaHtml +
       '<div class="component-card-head"><span class="component-type">' + esc(typeLabel(item.type)) + '</span><span class="component-size">S' + esc(item.size == null ? '—' : item.size) + '</span></div>' +
       '<h3 class="component-name">' + esc(name) + en + '</h3>' +
       '<p class="component-maker">' + esc(manuLabel(item.manu)) + ' · ' + esc(itemClass(item)) + (item.grade ? ' · ' + esc(item.grade) + ' 级' : '') + '</p>' +
@@ -245,7 +248,7 @@
       return '<option value="' + esc(grade) + '">' + esc(grade) + ' 级</option>';
     }).join('');
     els.grade.value = state.grade;
-    var classes = Array.from(new Set(items.map(function (item) { return item.itemClass || ''; }))).sort();
+    var classes = Array.from(new Set(items.filter(function (item) { return !weaponTypes[item.type]; }).map(function (item) { return item.itemClass || ''; }))).sort();
     els.itemClass.innerHTML = '<option value="all">全部级别</option>' + classes.map(function (value) {
       return '<option value="' + esc(value) + '">' + esc(classLabel(value)) + '</option>';
     }).join('');
@@ -361,8 +364,10 @@
 
     var name = displayName(item);
     var en = item.en && item.en !== name ? '<small>' + esc(item.en) + '</small>' : '';
+    var modalMedia = SC.componentMedia ? SC.componentMedia(item.id) : null;
     els.inner.innerHTML =
       '<button class="modal-close" type="button" data-component-close aria-label="关闭">' + SC.icon.close + '</button>' +
+      (modalMedia && modalMedia.card ? '<div class="component-modal-media"><img src="' + esc(modalMedia.card) + '" alt="' + esc(name) + '"></div>' : '') +
       '<div class="component-modal-head">' +
         '<div class="component-modal-kicker">' + esc(typeLabel(item.type)) + ' / S' + esc(item.size == null ? '—' : item.size) + '</div>' +
         '<h2>' + esc(name) + en + '</h2>' +
@@ -386,6 +391,27 @@
   function closeDetail() {
     if (els.dialog.open) els.dialog.close();
     document.body.classList.remove('modal-open');
+  }
+
+  function initHeroSlides() {
+    var slides = window.SC_COMPONENT_HERO || [];
+    var hosts = [document.getElementById('components-hero-media'), document.getElementById('component-showcase')].filter(Boolean);
+    if (!hosts.length || !slides.length) return;
+    hosts.forEach(function (host) {
+      host.innerHTML = slides.map(function (src, i) { return '<img src="' + esc(src) + '" alt="" class="' + (i === 0 ? 'active' : '') + '"' + (i === 0 ? '' : ' loading="lazy"') + ' decoding="async">'; }).join('');
+    });
+    var groups = hosts.map(function (host) { return Array.prototype.slice.call(host.querySelectorAll('img')); });
+    var max = Math.max.apply(null, groups.map(function (imgs) { return imgs.length; }));
+    if (max < 2 || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    var index = 0;
+    setInterval(function () {
+      var previous = index;
+      index = (index + 1) % max;
+      groups.forEach(function (imgs) {
+        if (imgs[previous]) imgs[previous].classList.remove('active');
+        if (imgs[index]) imgs[index].classList.add('active');
+      });
+    }, 7000);
   }
 
   function init() {
@@ -416,6 +442,7 @@
     if (params.get('type') && (params.get('type') === 'all' || meta.types[params.get('type')])) state.type = params.get('type');
     if (params.get('q')) { state.q = params.get('q'); els.search.value = state.q; }
 
+    initHeroSlides();
     renderMatrix();
     renderSizes();
     if (SC.syncSelects) SC.syncSelects();

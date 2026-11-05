@@ -85,3 +85,15 @@ body {
 .dialog-kicker { font-size: 11px; }
 .dialog-zh { font-size: 13px; }
 .place-foot { font-size: 11px; }
+
+/* location drawer needs more breathing room */
+.location-dialog { width: min(1280px, 76vw); }
+.dialog-body { grid-template-columns: minmax(0, 1fr) 340px; gap: 26px; }
+.dialog-stock { padding-left: 30px; padding-right: 30px; }
+.dialog-stock-list { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 1200px) {
+  .location-dialog { width: min(980px, 78vw); }
+  .dialog-body { grid-template-columns: 1fr; gap: 18px; }
+}
+
+.sc-select[hidden] { display: none !important; }

@@ -7,7 +7,11 @@
 
   window.SC = window.SC || {};
   SC.hiddenLocations = ['ghost-hollow', 'jumptown'];
-  SC.isHiddenLocation = function (id) { return (SC.hiddenLocations || []).indexOf(id) !== -1; };
+  SC.isHiddenLocation = function (id) {
+    if ((SC.hiddenLocations || []).indexOf(id) !== -1) return true;
+    var loc = (SC.locations || []).filter(function (item) { return item.id === id; })[0];
+    return !!(loc && loc.type === 'poi');
+  };
   SC.visibleLocations = function () { return (SC.locations || []).filter(function (loc) { return !SC.isHiddenLocation(loc.id); }); };
 
   SC.$ = function (sel, root) { return (root || document).querySelector(sel); };
@@ -110,6 +114,11 @@
   SC.weaponStats = function (weapon) {
     var name = typeof weapon === 'string' ? weapon : (weapon && weapon.name);
     return getWeaponStatsLookup()[normalizeKey(name)] || null;
+  };
+
+  SC.componentMedia = function (id) {
+    var media = window.SC_COMPONENT_MEDIA || {};
+    return media[id] || null;
   };
 
   SC.serviceName = function (name) {

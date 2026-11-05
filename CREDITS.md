@@ -32,7 +32,7 @@
 | `tressler` | Port Tressler | 页面主图 |
 | `grim-hex` | Grim HEX | 页面主图 |
 | `kareah` | Security Post Kareah | 页面主图 |
-| `pyro-gateway` | Prospector | 页面主图 |
+| `pyro-gateway` | Pyro Gateway (Stanton) | 页面主图 |
 | `terra-gateway` | Terra Gateway (Stanton) | 页面主图 |
 | `lagrange` | HUR-L1 Green Glade Station | 页面主图 |
 | `jumptown` | Jumptown | 页面主图 |

@@ -54,6 +54,36 @@ SC.locations.push(
     howTo: '降落在列夫斯基太空港，步行进入综合体。'
   },
   {
+    id: 'nyx-stanton-jump',
+    system: 'nyx',
+    name: 'Nyx - Stanton Jump Point',
+    cn: '尼克斯 - 斯坦顿跳跃点',
+    type: 'jump',
+    parent: 'Nyx',
+    mapX: 470,
+    mapY: 250,
+    danger: 4,
+    services: [],
+    desc: '尼克斯连接斯坦顿星系的跳跃点，是进入尼克斯的主要通道之一。',
+    tips: '跳跃点附近可能有敌对船只活动，进入前确认舰船状态。',
+    howTo: '在尼克斯星图中定位斯坦顿跳跃点，沿量子航行标记进入跳跃。'
+  },
+  {
+    id: 'nyx-pyro-jump',
+    system: 'nyx',
+    name: 'Nyx - Pyro Jump Point',
+    cn: '尼克斯 - 派罗跳跃点',
+    type: 'jump',
+    parent: 'Nyx',
+    mapX: 730,
+    mapY: 455,
+    danger: 4,
+    services: [],
+    desc: '尼克斯连接派罗星系的跳跃点，是边境航线的重要节点。',
+    tips: '派罗侧不受 UEE 管辖，跳跃前确认燃料与撤离路线。',
+    howTo: '在尼克斯星图中定位派罗跳跃点，沿量子航行标记进入跳跃。'
+  },
+  {
     id: 'glaciem-ring',
     system: 'nyx',
     name: 'Glaciem Ring',
@@ -90,6 +120,8 @@ if (window.SC_I18N && SC_I18N.locations) {
   SC_I18N.locations.levski = '列夫斯基';
   SC_I18N.locations['glaciem-ring'] = '冰川环带';
   SC_I18N.locations['keeger-belt'] = '基格带';
+  SC_I18N.locations['nyx-stanton-jump'] = '尼克斯 - 斯坦顿跳跃点';
+  SC_I18N.locations['nyx-pyro-jump'] = '尼克斯 - 派罗跳跃点';
 }
 
 if (window.SC_SYSTEM_COPY) {
@@ -117,6 +149,14 @@ if (window.SC_STORIES) {
       '冰川环带分布着矿点、残骸和非法前哨，是采矿与打捞的常用区域。',
       '环带内缺乏巡逻，进入前应确认舰船状态和撤离路线。'
     ]
+  };
+  SC_STORIES['nyx-stanton-jump'] = {
+    tagline: '尼克斯连接斯坦顿的跳跃点。',
+    story: ['该跳跃点是尼克斯与斯坦顿之间的主要通道，附近常有边境航线和巡逻活动。']
+  };
+  SC_STORIES['nyx-pyro-jump'] = {
+    tagline: '尼克斯连接派罗的跳跃点。',
+    story: ['该跳跃点连接尼克斯与派罗，是边境走私和独立航线的重要节点。']
   };
   SC_STORIES['keeger-belt'] = {
     tagline: '尼克斯的小行星采矿带。',

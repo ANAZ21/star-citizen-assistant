@@ -22,6 +22,16 @@ const componentClasses = componentMeta.classes || {};
 const componentTypeLabel = (type) => (componentTypes[type] && componentTypes[type].label) || type;
 const componentClassLabel = (value) => componentClasses[value] || value || '';
 const componentOrder = { power: 0, shield: 1, cooler: 2, quantum: 3, weapon: 4, missile: 5, missilelauncher: 6, bomb: 7, radar: 8, fueltank: 9, fuelintake: 10, qig: 11, emp: 12, turret: 13, tractor: 14, mining: 15, salvage: 16 };
+const weaponComponentTypes = { weapon: 1, missile: 1, missilelauncher: 1, bomb: 1 };
+const weaponComponentKind = (entry) => {
+  if (entry.type === 'missile') return '导弹/鱼雷';
+  if (entry.type === 'missilelauncher') return '导弹发射器';
+  if (entry.type === 'bomb') return '炸弹';
+  const type = SC.weaponType ? SC.weaponType({ name: entry.en || entry.name }) : '';
+  const known = ['实弹', '能量', '激光', '畸变', '电磁', '电浆', '点防御'];
+  for (const kind of known) if (type.indexOf(kind) !== -1) return kind;
+  return '其他';
+};
 const isShop = (id) => !!(window.SC_SHOPS && SC_SHOPS.locations && SC_SHOPS.locations[id]);
 const shopBuy = (id) => isShop(id) && SC_SHOPS.locations[id].counts.buy > 0;
 const systemById = (id) => SC.systems.find((system) => system.id === id);
@@ -56,6 +66,7 @@ const state = {
   componentType: 'all',
   componentGrade: 'all',
   componentClass: 'all',
+  componentWeapon: 'all',
   shipRole: 'all',
   selected: null
 };
@@ -98,6 +109,7 @@ let atlasH = 1;
 let lastFrame = 0;
 let elapsed = 0;
 let labelTimer = 0;
+let atlasClickTimer = null;
 let suppressClick = false;
 let lastHoverPick = 0;
 let texturesReady = false;
@@ -454,6 +466,24 @@ function makeJumpGateModel(id) {
   return group;
 }
 
+function makeAnamorphicTexture() {
+  const canvas = document.createElement('canvas');
+  canvas.width = 512; canvas.height = 64;
+  const ctx = canvas.getContext('2d');
+  const g = ctx.createLinearGradient(0, 0, 512, 0);
+  g.addColorStop(0, 'rgba(255,220,170,0)');
+  g.addColorStop(.23, 'rgba(255,220,170,.05)');
+  g.addColorStop(.47, 'rgba(255,240,210,.72)');
+  g.addColorStop(.5, 'rgba(255,255,240,1)');
+  g.addColorStop(.53, 'rgba(255,240,210,.72)');
+  g.addColorStop(.77, 'rgba(255,220,170,.05)');
+  g.addColorStop(1, 'rgba(255,220,170,0)');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, 512, 64);
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  return texture;
+}
+
 function makeStarRaysTexture() {
   const canvas = document.createElement('canvas');
   canvas.width = 512; canvas.height = 512;
@@ -494,7 +524,7 @@ function buildSystem(systemId) {
   const pyro = systemId === 'pyro';
   const starUniforms = { uMap: { value: textures.sun || null }, uTime: { value: 0 } };
   const star = new THREE.Mesh(
-    new THREE.SphereGeometry(2.8, 72, 48),
+    new THREE.SphereGeometry(7.2, 72, 48),
     new THREE.ShaderMaterial({
       uniforms: starUniforms,
       vertexShader: 'varying vec2 vUv; varying vec3 vN; varying vec3 vV; void main(){ vUv=uv; vN=normalize(normalMatrix*normal); vec4 mv=modelViewMatrix*vec4(position,1.0); vV=normalize(-mv.xyz); gl_Position=projectionMatrix*mv; }',
@@ -505,18 +535,26 @@ function buildSystem(systemId) {
   const starGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture, color: pyro ? 0xff7a45 : 0xffc26e, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0.82 }));
   starGlow.scale.set(pyro ? 32 : 29, pyro ? 32 : 29, 1);
   systemGroup.add(starGlow);
-  const corona = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture, color: pyro ? 0xff5a2a : 0xffd28a, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0.24 }));
-  corona.scale.set(48, 48, 1);
-  systemGroup.add(corona);
-  const starRays = new THREE.Sprite(new THREE.SpriteMaterial({ map: makeStarRaysTexture(), color: pyro ? 0xff9a6a : 0xffe2b0, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0.22 }));
-  starRays.scale.set(pyro ? 52 : 46, pyro ? 52 : 46, 1);
+  const prominence = new THREE.Mesh(
+    new THREE.TorusGeometry(8.1, 0.06, 8, 96),
+    new THREE.MeshBasicMaterial({ color: pyro ? 0xff7a45 : 0xffd28a, transparent: true, opacity: 0.32, blending: THREE.AdditiveBlending, depthWrite: false })
+  );
+  prominence.rotation.x = Math.PI / 2.45;
+  prominence.rotation.z = 0.25;
+  systemGroup.add(prominence);
+  const flare = new THREE.Sprite(new THREE.SpriteMaterial({ map: makeAnamorphicTexture(), color: pyro ? 0xffd0a0 : 0xfff1d0, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0.38 }));
+  flare.scale.set(pyro ? 72 : 64, 8.5, 1);
+  systemGroup.add(flare);
+  const starRays = new THREE.Sprite(new THREE.SpriteMaterial({ map: makeStarRaysTexture(), color: pyro ? 0xff9a6a : 0xffe2b0, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0.18 }));
+  starRays.scale.set(pyro ? 82 : 74, pyro ? 82 : 74, 1);
   systemGroup.add(starRays);
   systemGroup.userData.starUniforms = starUniforms;
   systemGroup.userData.starRays = starRays;
+  systemGroup.userData.prominence = prominence;
+  systemGroup.userData.flare = flare;
   const starLight = new THREE.PointLight(pyro ? 0xffb07a : 0xffd7a2, 3.8, 0, 0);
   systemGroup.add(starLight);
   systemGroup.userData.star = star;
-  systemGroup.userData.corona = corona;
 
   const orbitMaterial = new THREE.LineBasicMaterial({ color: 0x64d2ff, transparent: true, opacity: 0.11 });
   layout.nodes.filter((node) => node.loc.type === 'planet').forEach((node) => {
@@ -819,7 +857,9 @@ function leaveFocus() {
   updateAutoButton();
   updateFocusHud();
   updateLabelVisibility();
-  startCameraTween({ target: new THREE.Vector3(0, 0, 0), distance: 112, yaw: atlasState.yaw, pitch: atlasState.pitch }, 1.15);
+  const yaw = atlasState.fullscreen ? 0.35 : atlasState.yaw;
+  const pitch = atlasState.fullscreen ? 0.48 : atlasState.pitch;
+  startCameraTween({ target: new THREE.Vector3(0, 0, 0), distance: 112, yaw, pitch }, 1.15);
   const stage = $('#atlas-stage');
   if (stage) stage.classList.remove('is-focused');
   const hint = $('#atlas-hint');
@@ -888,6 +928,14 @@ function pickAtlasId(event) {
   return hit ? hit.object.userData.id : null;
 }
 
+function scheduleAtlasClick(event) {
+  clearTimeout(atlasClickTimer);
+  atlasClickTimer = setTimeout(() => {
+    atlasClickTimer = null;
+    pickAtlas(event);
+  }, 280);
+}
+
 function pickAtlas(event) {
   const id = pickAtlasId(event);
   if (id) selectAtlasNode(id);
@@ -903,15 +951,32 @@ function updateFullscreenButton() {
 function toggleFullscreen(force) {
   const stage = $('#atlas-stage');
   if (!stage) return;
-  atlasState.fullscreen = force == null ? !atlasState.fullscreen : force;
+  const entering = force == null ? !atlasState.fullscreen : force;
+  // Fullscreen is the system overview. Never inherit a planet focus from a
+  // previous pointer position or from the click that opened fullscreen.
+  if (entering && !atlasState.fullscreen) {
+    restorePlanetDetail();
+    atlasState.focus = null;
+    atlasState.selected = null;
+    atlasState.hover = null;
+    atlasState.tween = null;
+    updateFocusHud();
+    updateLabelVisibility();
+    const hint = $('#atlas-hint');
+    if (hint) hint.classList.remove('hidden');
+  }
+  atlasState.fullscreen = entering;
+  const warp = document.createElement('div');
+  warp.className = 'atlas-warp-flash';
+  stage.appendChild(warp);
+  setTimeout(() => warp.remove(), 950);
   stage.classList.toggle('is-fullscreen', atlasState.fullscreen);
   document.body.classList.toggle('atlas-fullscreen', atlasState.fullscreen);
   updateFullscreenButton();
   requestAnimationFrame(() => {
     resizeAtlas();
-    if (atlasState.focus && atlasState.layout) {
-      const node = atlasState.layout.positions[atlasState.focus];
-      if (node) startCameraTween(focusView(node), 0.9);
+    if (atlasState.fullscreen) {
+      startCameraTween({ target: new THREE.Vector3(0, 0, 0), distance: 112, yaw: atlasState.yaw, pitch: atlasState.pitch }, 0.9);
     }
   });
 }
@@ -970,13 +1035,15 @@ function bindAtlas() {
     canvas.style.cursor = 'grab';
     updateLabelVisibility();
     updateLabelPositions();
-    if (!suppressClick) pickAtlas(event);
+    if (!suppressClick) scheduleAtlasClick(event);
     setTimeout(() => { suppressClick = false; }, 50);
   };
   canvas.addEventListener('pointerup', end);
   canvas.addEventListener('pointercancel', end);
   canvas.addEventListener('dblclick', (event) => {
     event.preventDefault();
+    clearTimeout(atlasClickTimer);
+    atlasClickTimer = null;
     toggleFullscreen();
   });
   let fullscreenWheelTimer = null;
@@ -1001,7 +1068,6 @@ function bindAtlas() {
     focusClose.addEventListener('click', (event) => {
       event.stopPropagation();
       leaveFocus();
-      if (atlasState.fullscreen) toggleFullscreen(false);
     });
   }
   if (focusHost) {
@@ -1102,13 +1168,13 @@ function animate(t) {
       systemGroup.userData.starRays.material.rotation += delta * 0.012;
       systemGroup.userData.starRays.material.opacity = 0.16 + Math.sin(elapsed * 0.8) * 0.05;
     }
-    const corona = systemGroup.userData.corona;
-    if (corona) {
-      const pulse = 0.5 + 0.5 * Math.sin(elapsed * 1.4);
-      corona.material.opacity = 0.18 + pulse * 0.1;
-      const size = 34 + pulse * 5;
-      corona.scale.set(size, size, 1);
+    const prominence = systemGroup.userData.prominence;
+    if (prominence) {
+      prominence.rotation.z += delta * 0.035;
+      prominence.material.opacity = 0.24 + Math.sin(elapsed * 1.1) * 0.08;
     }
+    const flare = systemGroup.userData.flare;
+    if (flare) flare.material.opacity = 0.3 + Math.sin(elapsed * 0.7) * 0.08;
   }
   if (systemGroup) {
     systemGroup.children.forEach((obj) => {
@@ -1216,7 +1282,7 @@ function renderFilters() {
     ['all', '全部', locations.length],
     ['main', '主城', count((l) => l.type === 'landing' || ['checkmate', 'ruin', 'orbituary'].includes(l.id))],
     ['shops', '商店', count((l) => isShop(l.id))],
-    ['ships', '有飞船', count((l) => { const d = SC_SHOPS.locations[l.id]; return d && d.counts.buy; })],
+    ['ships', '有飞船商店', count((l) => { const d = SC_SHOPS.locations[l.id]; return d && d.counts.buy; })],
     ['weapons', '有飞船武器', count((l) => { const d = SC_SHOPS.locations[l.id]; return d && d.counts.weapons; })],
     ['rent', '可租赁', count((l) => { const d = SC_SHOPS.locations[l.id]; return d && d.counts.rent; })]
   ];
@@ -1306,7 +1372,7 @@ function cardMarkup(loc, index) {
   const media = locationMedia(loc);
   const feature = loc.type === 'landing' || ['checkmate', 'ruin', 'orbituary'].includes(loc.id);
   const tagline = story ? (feature ? story.story[0] : story.tagline) : SC.zhText(loc.desc);
-  const countItems = shop ? [['buy', '飞船'], ['components', '配件'], ['rent', '租赁']].filter(([key]) => shop.counts[key] > 0) : [];
+  const countItems = shop ? [['buy', '在售'], ['components', '配件'], ['rent', '租赁']].filter(([key]) => shop.counts[key] > 0) : [];
   const counts = countItems.length
     ? `<div class="place-counts">${countItems.map(([key, label]) => `<span><b>${shop.counts[key]}</b>${label}</span>`).join('')}</div>`
     : '';
@@ -1517,6 +1583,7 @@ function renderStockTools(loc, tab) {
   const scoped = tab === 'components'
     ? items.filter((entry) =>
       (state.componentType === 'all' || entry.type === state.componentType) &&
+      (!weaponComponentTypes[state.componentType] || state.componentWeapon === 'all' || weaponComponentKind(entry) === state.componentWeapon) &&
       (state.componentGrade === 'all' || entry.grade === state.componentGrade) &&
       (state.componentClass === 'all' || (entry.itemClass || '') === state.componentClass))
     : (tab === 'ships' || tab === 'rent'
@@ -1539,7 +1606,9 @@ function renderStockTools(loc, tab) {
       </div>`
     : '';
   const grades = tab === 'components' ? Array.from(new Set(uniqueBase.map((entry) => entry.grade).filter(Boolean))).sort() : [];
-  const classes = tab === 'components' ? Array.from(new Set(uniqueBase.map((entry) => entry.itemClass || ''))).sort() : [];
+  const weaponMode = !!weaponComponentTypes[state.componentType];
+  const classes = tab === 'components' ? Array.from(new Set(uniqueBase.filter((entry) => !weaponComponentTypes[entry.type]).map((entry) => entry.itemClass || ''))).sort() : [];
+  const weaponKinds = weaponMode ? Array.from(new Set(uniqueBase.filter((entry) => entry.type === state.componentType).map(weaponComponentKind))).sort() : [];
   const shipRoles = (tab === 'ships' || tab === 'rent')
     ? Array.from(new Set(uniqueBase.map((entry) => { const ship = SC.shipById(entry.shipId); return ship && SC.primaryRole ? SC.primaryRole(ship) : null; }).filter(Boolean))).sort()
     : [];
@@ -1549,20 +1618,26 @@ function renderStockTools(loc, tab) {
         ${shipRoles.map((role) => `<button type="button" class="${state.shipRole === role ? 'active' : ''}" data-ship-role="${esc(role)}">${esc(role)} <small>${uniqueBase.filter((entry) => { const ship = SC.shipById(entry.shipId); return ship && SC.primaryRole && SC.primaryRole(ship) === role; }).length}</small></button>`).join('')}
       </div>`
     : '';
-  const gradeFilter = grades.length > 1
+  const weaponFilter = weaponMode && weaponKinds.length > 1
+    ? `<div class="component-type-filter" role="group" aria-label="按武器类型筛选"><span class="filter-caption">武器类型</span>
+        <button type="button" class="${state.componentWeapon === 'all' ? 'active' : ''}" data-component-weapon="all">全部</button>
+        ${weaponKinds.map((kind) => `<button type="button" class="${state.componentWeapon === kind ? 'active' : ''}" data-component-weapon="${esc(kind)}">${esc(kind)}</button>`).join('')}
+      </div>`
+    : '';
+  const gradeFilter = !weaponMode && grades.length > 1
     ? `<div class="component-type-filter" role="group" aria-label="按等级筛选"><span class="filter-caption">等级</span>
         <button type="button" class="${state.componentGrade === 'all' ? 'active' : ''}" data-component-grade="all">全部</button>
         ${grades.map((grade) => `<button type="button" class="${state.componentGrade === grade ? 'active' : ''}" data-component-grade="${esc(grade)}">${esc(grade)} 级</button>`).join('')}
       </div>`
     : '';
-  const classFilter = classes.length > 1
+  const classFilter = !weaponMode && classes.length > 1
     ? `<div class="component-type-filter" role="group" aria-label="按级别筛选"><span class="filter-caption">级别</span>
         <button type="button" class="${state.componentClass === 'all' ? 'active' : ''}" data-component-class="all">全部</button>
         ${classes.map((value) => `<button type="button" class="${state.componentClass === value ? 'active' : ''}" data-component-class="${esc(value)}">${esc(componentClassLabel(value))}</button>`).join('')}
       </div>`
     : '';
   host.innerHTML = `<div class="stock-summary"><span>共 <b>${scoped.length}</b> 条记录</span><span>价格区间 <b>${fmt(Math.min.apply(null, prices))}</b> – <b>${fmt(Math.max.apply(null, prices))}</b> aUEC</span></div>
-    ${shipRoleFilter}${typeFilter}${gradeFilter}${classFilter}
+    ${shipRoleFilter}${typeFilter}${weaponFilter}${gradeFilter}${classFilter}
     <div class="weapon-sizes" role="group" aria-label="按尺寸筛选">
       <button type="button" class="${state.stockFilter === 'all' ? 'active' : ''}" data-stock-filter="all">全部 <small>${scoped.length}</small></button>
       ${sizes.map((size) => `<button type="button" class="${String(state.stockFilter) === String(size) ? 'active' : ''}" data-stock-filter="${esc(size)}">${esc(sizeLabel(size))}</button>`).join('')}
@@ -1591,6 +1666,7 @@ function renderDialogStock(loc, tab) {
   const typed = tab === 'components'
     ? allTyped.filter((entry) =>
       (state.componentType === 'all' || entry.type === state.componentType) &&
+      (!weaponComponentTypes[state.componentType] || state.componentWeapon === 'all' || weaponComponentKind(entry) === state.componentWeapon) &&
       (state.componentGrade === 'all' || entry.grade === state.componentGrade) &&
       (state.componentClass === 'all' || (entry.itemClass || '') === state.componentClass))
     : ((tab === 'ships' || tab === 'rent')
@@ -1635,10 +1711,13 @@ function openLocation(id, scroll) {
   state.componentType = 'all';
   state.componentGrade = 'all';
   state.componentClass = 'all';
+  state.componentWeapon = 'all';
   state.shipRole = 'all';
   atlasState.selected = id;
   updateLabelVisibility();
   renderDialog(loc);
+  const dialogShell = $('#location-dialog-shell');
+  if (dialogShell) dialogShell.scrollTop = 0;
   const dialog = $('#location-dialog');
   document.body.classList.add('drawer-open');
   if (dialog && !dialog.open) {
@@ -1762,6 +1841,9 @@ function init() {
       const componentType = event.target.closest('[data-component-type]');
       if (componentType && state.selected) {
         state.componentType = componentType.dataset.componentType;
+        state.componentWeapon = 'all';
+        state.componentGrade = 'all';
+        state.componentClass = 'all';
         state.stockPage = 1;
         state.stockFilter = 'all';
         renderDialogStock(SC.locationById(state.selected), state.tab);
@@ -1770,6 +1852,14 @@ function init() {
       const shipRole = event.target.closest('[data-ship-role]');
       if (shipRole && state.selected) {
         state.shipRole = shipRole.dataset.shipRole;
+        state.stockPage = 1;
+        state.stockFilter = 'all';
+        renderDialogStock(SC.locationById(state.selected), state.tab);
+        return;
+      }
+      const componentWeapon = event.target.closest('[data-component-weapon]');
+      if (componentWeapon && state.selected) {
+        state.componentWeapon = componentWeapon.dataset.componentWeapon;
         state.stockPage = 1;
         state.stockFilter = 'all';
         renderDialogStock(SC.locationById(state.selected), state.tab);

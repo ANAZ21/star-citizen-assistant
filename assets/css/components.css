@@ -267,3 +267,25 @@ a.component-shop-row:hover { background: rgba(255, 255, 255, .06); }
 .component-group-title { grid-column: 1 / -1; display: flex; align-items: baseline; gap: 8px; margin-top: 8px; padding: 4px 2px 2px; border-bottom: 1px solid rgba(255,255,255,.08); }
 .component-group-title span { color: var(--label); font-size: 16px; font-weight: 600; }
 .component-group-title small { color: var(--label-tertiary); font-family: var(--font-num); font-size: 12px; }
+
+/* component artwork */
+.components-hero-media { position: absolute; z-index: 0; inset: 0; overflow: hidden; opacity: .34; pointer-events: none; }
+.components-hero-media img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity 1.8s var(--ease); transform: scale(1.02); }
+.components-hero-media img.active { opacity: 1; }
+.components-hero-media::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(4,7,10,.96) 0%, rgba(4,7,10,.7) 48%, rgba(4,7,10,.88) 100%), linear-gradient(180deg, rgba(4,7,10,.3), rgba(4,7,10,.95)); }
+.component-card-media { height: 154px; margin: -17px -18px 14px; overflow: hidden; border-bottom: 1px solid rgba(255,255,255,.07); background: radial-gradient(circle at 65% 40%, rgba(100,210,255,.12), transparent 55%), #090d12; }
+.component-card-media img { width: 100%; height: 100%; object-fit: contain; padding: 8px 26px; filter: drop-shadow(0 8px 24px rgba(0,0,0,.45)); transition: transform .5s var(--ease); }
+.component-card:hover .component-card-media img { transform: scale(1.04); }
+.component-modal-media { height: 250px; margin: -30px -30px 24px; overflow: hidden; border-radius: 18px 18px 0 0; border-bottom: 1px solid rgba(255,255,255,.08); background: radial-gradient(circle at 60% 45%, rgba(100,210,255,.13), transparent 60%), #080c11; }
+.component-modal-media img { width: 100%; height: 100%; object-fit: contain; padding: 18px 60px; }
+
+.component-showcase { padding-top: 22px; }
+.component-showcase-frame { position: relative; height: 300px; overflow: hidden; border: 1px solid rgba(255,255,255,.1); border-radius: 18px; background: #070b10; box-shadow: 0 28px 70px rgba(0,0,0,.34); }
+.component-showcase-slides { position: absolute; inset: 0; }
+.component-showcase-slides img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transform: scale(1.03); transition: opacity 1.6s var(--ease), transform 8s linear; }
+.component-showcase-slides img.active { opacity: 1; transform: scale(1); }
+.component-showcase-frame::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(3,6,10,.72), rgba(3,6,10,.12) 55%, rgba(3,6,10,.42)), linear-gradient(180deg, transparent 45%, rgba(3,6,10,.75)); pointer-events: none; }
+.component-showcase-caption { position: absolute; z-index: 2; left: 26px; bottom: 22px; display: flex; align-items: baseline; gap: 9px; }
+.component-showcase-caption span { color: var(--label); font-size: 20px; font-weight: 600; letter-spacing: .02em; }
+.component-showcase-caption small { color: var(--label-tertiary); font-family: var(--font-mono); font-size: 9px; letter-spacing: .1em; }
+@media (max-width: 1200px) { .component-showcase-frame { height: 230px; } }
