@@ -36,6 +36,8 @@
   var shopName = function (value) {
     return SC.shopName ? SC.shopName(value) : value;
   };
+  var aggregateLocations = { lagrange: true, 'pyro-outposts': true };
+  var isAggregate = function (shop) { return !!aggregateLocations[shop.locId]; };
   var locationName = function (id) {
     var loc = id && SC.locationById ? SC.locationById(id) : null;
     return loc ? (SC.zhName(loc) || loc.name) : '';
@@ -103,9 +105,10 @@
   function statsMarkup(item, expanded) {
     var rows = statRows(item);
     if (!expanded) rows = rows.slice(0, 4);
+    var note = item.type === 'weapon' && !item.stats.dps ? '<p class="component-warning">点防御发射器，暂无舰炮 DPS 数据。</p>' : '';
     return '<div class="component-stats' + (expanded ? ' expanded' : '') + '">' + rows.map(function (row) {
       return '<span><i>' + esc(row.label) + '</i><b>' + esc(row.value) + '</b></span>';
-    }).join('') + '</div>';
+    }).join('') + '</div>' + note;
   }
 
   function sortedShops(item) {
@@ -121,12 +124,13 @@
       var body =
         '<span class="component-shop-place"><b>' + esc(loc) + esc(site) + '</b><small>' + esc(shopName(shop.shop)) + '</small></span>' +
         '<span class="component-shop-price"><b>' + fmt(shop.price, 0) + '</b><small>aUEC</small></span>';
-      return shop.locId
-        ? '<a class="component-shop-row" href="systems.html?loc=' + encodeURIComponent(shop.locId) + '">' + body + '</a>'
-        : '<div class="component-shop-row">' + body + '</div>';
+      if (shop.locId && !isAggregate(shop)) {
+        return '<a class="component-shop-row" href="systems.html?loc=' + encodeURIComponent(shop.locId) + '">' + body + '</a>';
+      }
+      return '<div class="component-shop-row' + (isAggregate(shop) ? ' aggregate' : '') + '"' + (isAggregate(shop) ? ' title="星图按区域汇总，具体站点见上方"' : '') + '>' + body + '</div>';
     }).join('');
     var more = shops.length - shown.length;
-    if (more > 0) html += '<div class="component-shop-more">另有 ' + more + ' 个地点有售</div>';
+    if (more > 0) html += '<div class="component-shop-more">另有 ' + more + ' 个购买点有售</div>';
     return html;
   }
 
@@ -140,7 +144,7 @@
       '<p class="component-maker">' + esc(manuLabel(item.manu)) + ' · ' + esc(itemClass(item)) + (item.grade ? ' · ' + esc(item.grade) + ' 级' : '') + '</p>' +
       statsMarkup(item) +
       '<div class="component-shops">' + shopRows(item, 3) + '</div>' +
-      '<div class="component-card-foot"><span>' + shops.length + ' 个地点 · 最低 ' + (item.minPrice == null ? '—' : fmt(item.minPrice, 0) + ' aUEC') + '</span><button class="component-open" type="button" data-open-component="' + esc(item.id) + '">全部地点 →</button></div>' +
+      '<div class="component-card-foot"><span>' + shops.length + ' 个购买点 · 最低 ' + (item.minPrice == null ? '—' : fmt(item.minPrice, 0) + ' aUEC') + '</span><button class="component-open" type="button" data-open-component="' + esc(item.id) + '">全部购买点 →</button></div>' +
     '</article>';
   }
 
@@ -267,9 +271,10 @@
       var body =
         '<span class="component-shop-place"><b>' + esc(loc) + esc(site) + '</b><small>' + esc(shopName(shop.shop)) + '</small></span>' +
         '<span class="component-shop-price"><b>' + fmt(shop.price, 0) + '</b><small>aUEC</small></span>';
-      return shop.locId
-        ? '<a class="component-shop-row" href="systems.html?loc=' + encodeURIComponent(shop.locId) + '">' + body + '</a>'
-        : '<div class="component-shop-row">' + body + '</div>';
+      if (shop.locId && !isAggregate(shop)) {
+        return '<a class="component-shop-row" href="systems.html?loc=' + encodeURIComponent(shop.locId) + '">' + body + '</a>';
+      }
+      return '<div class="component-shop-row' + (isAggregate(shop) ? ' aggregate' : '') + '"' + (isAggregate(shop) ? ' title="星图按区域汇总，具体站点见上方"' : '') + '>' + body + '</div>';
     }).join('');
 
     var name = displayName(item);
@@ -282,9 +287,9 @@
         '<p>' + esc(manuLabel(item.manu)) + ' · ' + esc(itemClass(item)) + (item.grade ? ' · ' + esc(item.grade) + ' 级' : '') + '</p>' +
       '</div>' +
       statsMarkup(item, true) +
-      '<div class="component-modal-shops-head"><h4>购买地点</h4><span>' + shops.length + ' 个地点 · 按价格排序</span></div>' +
+      '<div class="component-modal-shops-head"><h4>购买点</h4><span>' + shops.length + ' 个购买点 · 按价格排序</span></div>' +
       '<div class="component-modal-shops">' + allShops + '</div>' +
-      '<p class="component-modal-note">价格为 CStone Universal Item Finder 社区记录，单位 aUEC；库存与价格可能随版本变动。</p>';
+      '<p class="component-modal-note">价格为 CStone Universal Item Finder 社区记录，单位 aUEC；DPS 来自 Star Citizen Wiki API。库存、价格与性能可能随版本变动。' + (item.type === 'quantum' ? ' 量子速度按 CStone 原始 DriveSpeed 换算为 km/s。' : '') + (shops.some(isAggregate) ? ' 标记为区域汇总的购买点未在星图中细分到具体站点。' : '') + '</p>';
 
     els.inner.querySelector('[data-component-close]').addEventListener('click', closeDetail);
     if (!els.dialog.open) {
@@ -292,6 +297,8 @@
       document.body.classList.add('modal-open');
     }
   }
+
+  SC.openComponent = openDetail;
 
   function closeDetail() {
     if (els.dialog.open) els.dialog.close();
@@ -324,6 +331,7 @@
     renderSizes();
     if (SC.syncSelects) SC.syncSelects();
     render();
+    if (params.get('component')) setTimeout(function () { openDetail(params.get('component')); }, 80);
 
     els.matrix.addEventListener('click', function (event) {
       var button = event.target.closest('[data-matrix-type]');

@@ -68,7 +68,6 @@ window.SC_COMPONENTS = [{"id":"0ed88703-3183-48c8-95f1-eda2b5b4381a","type":"pow
   }
   if (!window.SC_SHOPS || !SC_SHOPS.locations) return;
   SC_COMPONENTS.forEach(function (component) {
-    if (component.type === 'weapon') return;
     component.shops.forEach(function (shop) {
       if (!shop.locId) return;
       var target = SC_SHOPS.locations[shop.locId];
@@ -85,7 +84,9 @@ window.SC_COMPONENTS = [{"id":"0ed88703-3183-48c8-95f1-eda2b5b4381a","type":"pow
         grade: component.grade, itemClass: component.itemClass, stats: component.stats,
         price: shop.price, shop: shop.shop, site: shop.site, place: shop.place
       });
-      target.counts.components = target.components.length;
+      var seenComponents = {};
+      target.components.forEach(function (entry) { seenComponents[entry.componentId] = 1; });
+      target.counts.components = Object.keys(seenComponents).length;
     });
   });
 })();

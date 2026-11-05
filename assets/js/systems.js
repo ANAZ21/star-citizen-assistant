@@ -1201,7 +1201,8 @@ function stockPreview(shop, feature) {
     if (names) lines.push(`<p class="place-stock-line rent"><span>租赁</span>${esc(names)}${more > 0 ? ` <em>+${more}</em>` : ''}</p>`);
   }
   if (shop.components && shop.components.length) {
-    lines.push(`<p class="place-stock-line components"><span>配件</span>${shop.components.length} 件在售</p>`);
+    const unique = new Set(shop.components.map((entry) => entry.componentId)).size;
+    lines.push(`<p class="place-stock-line components"><span>配件</span>${unique} 件在售</p>`);
   }
   return lines.join('');
 }
@@ -1212,7 +1213,7 @@ function cardMarkup(loc, index) {
   const media = locationMedia(loc);
   const feature = loc.type === 'landing' || ['checkmate', 'ruin', 'orbituary'].includes(loc.id);
   const tagline = story ? (feature ? story.story[0] : story.tagline) : SC.zhText(loc.desc);
-  const countItems = shop ? [['buy', '飞船'], ['weapons', '飞船武器'], ['rent', '租赁']].filter(([key]) => shop.counts[key] > 0) : [];
+  const countItems = shop ? [['buy', '飞船'], ['components', '配件'], ['rent', '租赁']].filter(([key]) => shop.counts[key] > 0) : [];
   const counts = countItems.length
     ? `<div class="place-counts">${countItems.map(([key, label]) => `<span><b>${shop.counts[key]}</b>${label}</span>`).join('')}</div>`
     : '';
@@ -1309,6 +1310,11 @@ function componentSpecs(entry) {
     add('充能', stats.spool);
     add('冷却', stats.cooldown);
     add('燃料', stats.fuel);
+  } else if (entry.type === 'weapon') {
+    add('DPS', stats.dps);
+    add('持续 DPS', stats.sustained);
+    if (stats.range != null) rows.push(`<span><i>射程</i><b>${(stats.range / 1000).toFixed(1)} km</b></span>`);
+    add('单发伤害', stats.alpha);
   }
   return rows.slice(0, 4).join('');
 }
@@ -1334,11 +1340,14 @@ function stockCard(entry, kind) {
   }
   if (kind === 'component' || kind === 'components') {
     const site = entry.site ? ` · ${entry.site}` : '';
+    const klass = entry.type === 'weapon' && SC.weaponType ? SC.weaponType({ name: entry.en || entry.name }) : componentClassLabel(entry.itemClass);
+    const warning = entry.type === 'weapon' && entry.stats && !entry.stats.dps ? '<p class="stock-warning">点防御发射器，暂无舰炮 DPS。</p>' : '';
     return `<article class="stock-card component">
       <div class="stock-card-head"><span class="stock-size">S${esc(entry.size == null ? '—' : entry.size)}</span><span class="stock-kind">${esc(componentTypeLabel(entry.type))}</span></div>
       <b class="stock-name">${esc(entry.name)}</b>
-      <small class="stock-sub">${esc(SC.manuName ? SC.manuName(entry.manu) : entry.manu)} · ${esc(componentClassLabel(entry.itemClass))} · ${esc(entry.grade)} 级 · ${esc(shopName(entry.shop))}${esc(site)}</small>
+      <small class="stock-sub">${esc(SC.manuName ? SC.manuName(entry.manu) : entry.manu)} · ${esc(klass)} · ${esc(entry.grade)} 级 · ${esc(shopName(entry.shop))}${esc(site)}</small>
       <div class="stock-specs">${componentSpecs(entry)}</div>
+      ${warning}
       <div class="stock-price">${fmt(entry.price)}<small>aUEC</small></div>
     </article>`;
   }
@@ -1402,6 +1411,14 @@ function renderStockTools(loc, tab) {
   const items = stockItems(shop, tab);
   if (!items.length) { host.innerHTML = ''; return; }
   const base = stockItems(shop, tab);
+  const uniqueBase = [];
+  const seenBase = {};
+  base.forEach((entry) => {
+    const key = entry.componentId || entry.shipId || entry.name;
+    if (seenBase[key]) return;
+    seenBase[key] = true;
+    uniqueBase.push(entry);
+  });
   const scoped = tab === 'components' && state.componentType !== 'all'
     ? items.filter((entry) => entry.type === state.componentType)
     : items;
@@ -1409,15 +1426,15 @@ function renderStockTools(loc, tab) {
   const prices = scoped.map((entry) => tab === 'rent' ? entry.days[0] : entry.price);
   const sizeLabel = (size) => tab === 'weapons' || tab === 'components' ? 'S' + size : (SC.sizes[size] || size);
   const typeCounts = tab === 'components'
-    ? Array.from(new Set(base.map((entry) => entry.type))).sort((a, b) => (componentOrder[a] || 0) - (componentOrder[b] || 0)).map((type) => [type, base.filter((entry) => entry.type === type).length])
+    ? Array.from(new Set(uniqueBase.map((entry) => entry.type))).sort((a, b) => (componentOrder[a] || 0) - (componentOrder[b] || 0)).map((type) => [type, uniqueBase.filter((entry) => entry.type === type).length])
     : [];
   const typeFilter = typeCounts.length > 1
     ? `<div class="component-type-filter" role="group" aria-label="按配件类别筛选">
-        <button type="button" class="${state.componentType === 'all' ? 'active' : ''}" data-component-type="all">全部类别 <small>${base.length}</small></button>
+        <button type="button" class="${state.componentType === 'all' ? 'active' : ''}" data-component-type="all">全部类别 <small>${uniqueBase.length}</small></button>
         ${typeCounts.map(([type, n]) => `<button type="button" class="${state.componentType === type ? 'active' : ''}" data-component-type="${esc(type)}">${esc(componentTypeLabel(type))} <small>${n}</small></button>`).join('')}
       </div>`
     : '';
-  host.innerHTML = `<div class="stock-summary"><span>共 <b>${scoped.length}</b> 项</span><span>价格区间 <b>${fmt(Math.min.apply(null, prices))}</b> – <b>${fmt(Math.max.apply(null, prices))}</b> aUEC</span></div>
+  host.innerHTML = `<div class="stock-summary"><span>共 <b>${scoped.length}</b> 条记录</span><span>价格区间 <b>${fmt(Math.min.apply(null, prices))}</b> – <b>${fmt(Math.max.apply(null, prices))}</b> aUEC</span></div>
     ${typeFilter}
     <div class="weapon-sizes" role="group" aria-label="按尺寸筛选">
       <button type="button" class="${state.stockFilter === 'all' ? 'active' : ''}" data-stock-filter="all">全部 <small>${scoped.length}</small></button>
@@ -1499,10 +1516,8 @@ function renderDialog(loc) {
   const danger = riskLabel(loc.danger);
   const tabs = shop ? [
     ['ships', '飞船', shop.counts.buy],
-    ['weapons', '飞船武器', shop.counts.weapons],
-    ['rent', '租赁', shop.counts.rent],
     ['components', '配件', shop.counts.components || 0],
-    ['packages', '套装', 1]
+    ['rent', '租赁', shop.counts.rent]
   ].filter(([, , n]) => n > 0) : [];
   state.tab = tabs.some(([key]) => key === state.tab) ? state.tab : (tabs[0] ? tabs[0][0] : 'ships');
   shell.innerHTML = `

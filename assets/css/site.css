@@ -2695,3 +2695,5 @@ select, option { background-color: #1c1c1e; color: var(--label); }
 .sc-select-option.active { background: rgba(100, 210, 255, .12); color: var(--cyan); }
 .ships-toolbar .sc-select { min-width: 132px; }
 .components-toolbar .sc-select { min-width: 138px; }
+
+.page-note { margin-top: 10px; color: var(--label-tertiary); font-size: 12px; line-height: 1.5; }

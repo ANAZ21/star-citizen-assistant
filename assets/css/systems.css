@@ -550,3 +550,5 @@ body.drawer-open .atlas-focus { display: none; }
 .component-type-filter button:hover { color: var(--label); border-color: rgba(100,210,255,.3); }
 .component-type-filter button.active { border-color: rgba(100,210,255,.42); background: rgba(100,210,255,.1); color: var(--cyan); }
 .component-type-filter small { margin-left: 3px; color: var(--label-tertiary); font-family: var(--font-num); font-size: 10px; }
+
+.stock-warning { margin: 8px 12px 0; color: var(--orange); font-size: 10px; line-height: 1.4; }

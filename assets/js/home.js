@@ -15,6 +15,8 @@
   var heroVisible = 0;
 
   function init() {
+    var componentCount = document.getElementById('hero-component-count');
+    if (componentCount && window.SC_COMPONENT_SEARCH) componentCount.textContent = SC_COMPONENT_SEARCH.length;
     initHero();
     renderStats();
     renderFeatured();

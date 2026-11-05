@@ -351,7 +351,7 @@
         '<div class="search-sheet-head">' +
           '<div class="ios-search-field search-sheet-field">' +
             SC.icon.search +
-            '<input id="global-search-input" type="search" placeholder="飞船、地点、星系" autocomplete="off" spellcheck="false" aria-label="搜索">' +
+            '<input id="global-search-input" type="search" placeholder="飞船、配件、地点、星系" autocomplete="off" spellcheck="false" aria-label="搜索">' +
           '</div>' +
           '<button class="search-cancel" id="search-cancel" type="button">取消</button>' +
         '</div>' +
@@ -378,6 +378,13 @@
         var hay = [l.name, l.cn, SC.zhName(l), l.parent, SC.zhParent(l.parent), l.desc, story && story.tagline, SC.typeLabels[l.type], (SC.systemById(l.system) || {}).name].join(' ').toLowerCase();
         return hay.indexOf(q) !== -1;
       }).slice(0, q ? 7 : 4);
+
+      var comps = (window.SC_COMPONENT_SEARCH || []).filter(function (c) {
+        if (!q) return false;
+        var label = c.type === 'weapon' && SC.weaponName ? SC.weaponName(c.en) : c.name;
+        var hay = [c.name, c.en, c.manu, SC.manuName(c.manu), c.typeLabel, label].join(' ').toLowerCase();
+        return hay.indexOf(q) !== -1;
+      }).slice(0, 6);
 
       var html = '';
       searchState.items = [];
@@ -408,7 +415,21 @@
         });
       }
 
-      if (!html) html = '<div class="search-empty">没有找到匹配的飞船或地点。<br>试试英文名、制造商或星系名。</div>';
+      if (comps.length) {
+        html += '<div class="search-group-label">配件与飞船武器</div>';
+        comps.forEach(function (c) {
+          var i = searchState.items.length;
+          searchState.items.push({ kind: 'component', id: c.id });
+          var label = c.type === 'weapon' && SC.weaponName ? SC.weaponName(c.en) : c.name;
+          html += '<button class="search-item' + (i === 0 ? ' active' : '') + '" type="button" data-kind="component" data-id="' + c.id + '">' +
+            '<span class="si-type">' + (c.type === 'weapon' ? 'WEAPON' : 'COMP') + '</span>' +
+            '<span class="si-main"><b>' + SC.escapeHtml(label) + '</b>' +
+            '<small>' + SC.escapeHtml(SC.manuName(c.manu)) + ' · ' + SC.escapeHtml(c.typeLabel) + ' · S' + SC.escapeHtml(c.size == null ? '—' : c.size) + '</small></span>' +
+            '</button>';
+        });
+      }
+
+      if (!html) html = '<div class="search-empty">没有找到匹配的飞船、地点或配件。<br>试试英文名、制造商或星系名。</div>';
       results.innerHTML = html;
       searchState.index = 0;
 
@@ -427,6 +448,9 @@
       if (kind === 'ship') {
         if (typeof SC.openShip === 'function' && document.body.getAttribute('data-page') === 'ships') SC.openShip(id);
         else window.location.href = 'ships.html?ship=' + encodeURIComponent(id);
+      } else if (kind === 'component') {
+        if (typeof SC.openComponent === 'function' && document.body.getAttribute('data-page') === 'components') SC.openComponent(id);
+        else window.location.href = 'components.html?component=' + encodeURIComponent(id);
       } else {
         if (typeof SC.openLocation === 'function' && document.body.getAttribute('data-page') === 'systems') SC.openLocation(id, true);
         else window.location.href = 'systems.html?loc=' + encodeURIComponent(id);
@@ -670,13 +694,18 @@
         menu.hidden = false;
         wrap.classList.add('open');
         button.setAttribute('aria-expanded', 'true');
-        requestAnimationFrame(function () {
-          var rect = menu.getBoundingClientRect();
-          menu.style.left = rect.right > window.innerWidth - 12 ? 'auto' : '0';
-          menu.style.right = rect.right > window.innerWidth - 12 ? '0' : 'auto';
-          var active = menu.querySelector('.active');
-          if (active) active.scrollIntoView({ block: 'nearest' });
-        });
+        menu.style.top = '';
+        menu.style.bottom = '';
+        var rect = menu.getBoundingClientRect();
+        var buttonRect = button.getBoundingClientRect();
+        if (rect.bottom > window.innerHeight - 10 && buttonRect.top > rect.height + 12) {
+          menu.style.top = 'auto';
+          menu.style.bottom = 'calc(100% + 6px)';
+        }
+        menu.style.left = rect.right > window.innerWidth - 12 ? 'auto' : '0';
+        menu.style.right = rect.right > window.innerWidth - 12 ? '0' : 'auto';
+        var active = menu.querySelector('.active');
+        if (active) active.scrollIntoView({ block: 'nearest' });
       }
       button.addEventListener('click', function (event) {
         event.stopPropagation();
