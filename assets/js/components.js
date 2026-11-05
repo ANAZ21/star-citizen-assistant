@@ -152,8 +152,6 @@
     var name = displayName(item);
     var en = item.en && item.en !== name ? '<small>' + esc(item.en) + '</small>' : '';
     var shops = sortedShops(item);
-    var media = SC.componentMedia ? SC.componentMedia(item.id) : null;
-    var mediaHtml = media && media.card ? '<div class="component-card-media"><img src="' + esc(media.card) + '" alt="' + esc(name) + '" loading="lazy" decoding="async"></div>' : '';
     var acquire = '<div class="component-acquire"><i>获取</i><span>' + esc(item.acquisition || '无公开获取记录') + '</span></div>';
     var shopsBlock = shops.length
       ? '<div class="component-shops">' + shopRows(item, 3) + '</div>'
@@ -162,7 +160,6 @@
       ? '<span>' + shops.length + ' 个购买点 · 最低 ' + (item.minPrice == null ? '—' : fmt(item.minPrice, 0) + ' aUEC') + '</span><button class="component-open" type="button" data-open-component="' + esc(item.id) + '">全部购买点 →</button>'
       : '<span>商店无售</span><button class="component-open" type="button" data-open-component="' + esc(item.id) + '">获取方式 →</button>';
     return '<article class="component-card reveal' + (shops.length ? '' : ' unsold') + '" data-component="' + esc(item.id) + '" tabindex="0" style="--i:' + (index % 6) + '">' +
-      mediaHtml +
       '<div class="component-card-head"><span class="component-type">' + esc(typeLabel(item.type)) + '</span><span class="component-size">S' + esc(item.size == null ? '—' : item.size) + '</span></div>' +
       '<h3 class="component-name">' + esc(name) + en + '</h3>' +
       '<p class="component-maker">' + esc(manuLabel(item.manu)) + ' · ' + esc(itemClass(item)) + (item.grade ? ' · ' + esc(item.grade) + ' 级' : '') + '</p>' +
@@ -364,10 +361,8 @@
 
     var name = displayName(item);
     var en = item.en && item.en !== name ? '<small>' + esc(item.en) + '</small>' : '';
-    var modalMedia = SC.componentMedia ? SC.componentMedia(item.id) : null;
     els.inner.innerHTML =
       '<button class="modal-close" type="button" data-component-close aria-label="关闭">' + SC.icon.close + '</button>' +
-      (modalMedia && modalMedia.card ? '<div class="component-modal-media"><img src="' + esc(modalMedia.card) + '" alt="' + esc(name) + '"></div>' : '') +
       '<div class="component-modal-head">' +
         '<div class="component-modal-kicker">' + esc(typeLabel(item.type)) + ' / S' + esc(item.size == null ? '—' : item.size) + '</div>' +
         '<h2>' + esc(name) + en + '</h2>' +

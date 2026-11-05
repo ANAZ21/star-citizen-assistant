@@ -311,3 +311,11 @@ a.component-shop-row:hover { background: rgba(255, 255, 255, .06); }
   animation: component-hero-scan 5.5s ease-in-out infinite;
 }
 @keyframes component-hero-scan { 0%,100% { opacity: .15; transform: scaleX(.5); } 50% { opacity: .8; transform: scaleX(1); } }
+
+.components-hero-media::before {
+  content: ""; position: absolute; z-index: 2; top: 0; bottom: 0; width: 28%;
+  background: linear-gradient(90deg, transparent, rgba(100,210,255,.12), transparent);
+  animation: component-scan 7s ease-in-out infinite;
+}
+@keyframes component-scan { 0% { transform: translateX(-160%); opacity: 0; } 18% { opacity: .8; } 70% { opacity: .2; } 100% { transform: translateX(460%); opacity: 0; } }
+.components-hero-media img { animation-duration: 13s; }

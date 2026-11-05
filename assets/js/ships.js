@@ -26,12 +26,40 @@
     btn.addEventListener('click', function () { window.scrollTo({ top: 0, behavior: 'smooth' }); });
   }
 
+  function initShipHeroSlides() {
+    var host = document.getElementById('ships-hero-slides');
+    var caption = document.getElementById('ships-hero-caption');
+    if (!host) return;
+    var ids = ['carrack', 'polaris', '890-jump', 'reclaimer'];
+    var slides = ids.map(function (id) {
+      var ship = SC.shipById(id);
+      var media = SC.shipMedia(id);
+      return ship && media && (media.hero || media.card) ? { ship: ship, src: media.hero || media.card } : null;
+    }).filter(Boolean);
+    if (!slides.length) return;
+    host.innerHTML = slides.map(function (slide, i) {
+      return '<img src="' + SC.escapeHtml(slide.src) + '" width="1600" height="900" alt="' + SC.escapeHtml(slide.ship.name) + ' 飞船展示" class="' + (i === 0 ? 'active' : '') + '"' + (i === 0 ? ' fetchpriority="high"' : ' loading="lazy"') + ' decoding="async">';
+    }).join('');
+    var imgs = Array.prototype.slice.call(host.querySelectorAll('img'));
+    function label(slide) {
+      if (caption) caption.textContent = slide.ship.name.toUpperCase() + ' / ' + slide.ship.role;
+    }
+    label(slides[0]);
+    if (imgs.length < 2 || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    var index = 0;
+    setInterval(function () {
+      imgs[index].classList.remove('active');
+      index = (index + 1) % imgs.length;
+      imgs[index].classList.add('active');
+      label(slides[index]);
+    }, 6500);
+  }
+
   function init() {
     initBackToTop();
+    initShipHeroSlides();
     var heroCount = document.getElementById('hero-ship-count');
     if (heroCount) heroCount.textContent = SC.ships.length;
-    var note = document.getElementById('ship-coverage-note');
-    if (note) note.textContent = '当前收录 ' + SC.ships.length + ' 艘标准可飞与在售舰船，不含活动涂装与特别版。';
 
     els.grid = document.getElementById('ship-grid');
     els.count = document.getElementById('result-count');

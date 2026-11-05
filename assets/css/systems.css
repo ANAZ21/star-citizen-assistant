@@ -583,3 +583,6 @@ body.drawer-open .atlas-focus { display: none; }
 
 .atlas-warp-flash { position: absolute; z-index: 30; inset: 0; pointer-events: none; background: radial-gradient(circle at 50% 52%, rgba(190,230,255,.2), rgba(3,6,10,.9) 58%); animation: atlas-warp-flash .95s cubic-bezier(.22,1,.36,1) both; }
 @keyframes atlas-warp-flash { 0% { opacity: 0; transform: scale(1.06); } 32% { opacity: 1; } 100% { opacity: 0; transform: scale(1); } }
+
+body.atlas-fullscreen .atlas-head,
+body.atlas-fullscreen .locations-section { visibility: hidden; }

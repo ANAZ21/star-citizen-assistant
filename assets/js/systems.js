@@ -532,9 +532,6 @@ function buildSystem(systemId) {
     })
   );
   systemGroup.add(star);
-  const starGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture, color: pyro ? 0xff7a45 : 0xffc26e, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0.82 }));
-  starGlow.scale.set(pyro ? 32 : 29, pyro ? 32 : 29, 1);
-  systemGroup.add(starGlow);
   const prominence = new THREE.Mesh(
     new THREE.TorusGeometry(8.1, 0.06, 8, 96),
     new THREE.MeshBasicMaterial({ color: pyro ? 0xff7a45 : 0xffd28a, transparent: true, opacity: 0.32, blending: THREE.AdditiveBlending, depthWrite: false })
@@ -1424,11 +1421,7 @@ function switchSystem(id, updateUrl) {
   }
 }
 
-function updateCount() {
-  const count = SC.locations.filter((loc) => loc.system === state.system && !(SC.isHiddenLocation && SC.isHiddenLocation(loc.id))).length;
-  const el = $('#atlas-object-count');
-  if (el) el.textContent = `${count} 个地点`;
-}
+function updateCount() {}
 
 /* ---------- location dialog ---------- */
 function componentSpecs(entry) {

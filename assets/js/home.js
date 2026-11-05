@@ -8,8 +8,26 @@
   if (document.body.getAttribute('data-page') !== 'home') return;
 
   var HERO_SHIPS = ['carrack', 'polaris', '890-jump'];
-  var FEATURED = ['cutlass-black', 'gladius', 'andromeda', 'polaris'];
+  var FEATURED = [
+    'cutlass-black', 'gladius', 'andromeda', 'polaris',
+    'carrack', 'constellation-phoenix', 'guardian', 'asgard',
+    'f8c-lightning', 'corsair', 'vulture', 'zeus-cl',
+    'retaliator-bomber', 'hurricane', 'sabre', 'starlancer-max',
+    'railen', 'ironclad', 'starfarer', 'prowler',
+    '600i-touring', 'a1-spirit', 'scorpius', '890-jump'
+  ];
+  var FEATURED_PAGE_SIZE = 8;
+  var featuredPage = 0;
+  var featuredTimer = null;
   var currentHero = 0;
+  var SHOP_MEDIA = {
+    lorville: 'assets/img/locations/lorville.webp',
+    area18: 'assets/img/locations/area18.webp',
+    orison: 'assets/img/locations/orison.webp',
+    checkmate: 'assets/img/locations/checkmate.webp',
+    ruin: 'assets/img/locations/ruin.webp',
+    orbituary: 'assets/img/locations/orbituary.webp'
+  };
   var heroTimer = null;
   var heroLayers = [];
   var heroVisible = 0;
@@ -20,8 +38,9 @@
     var componentCount = document.getElementById('hero-component-count');
     if (componentCount && window.SC_COMPONENT_SEARCH) componentCount.textContent = SC_COMPONENT_SEARCH.length;
     initHero();
-    renderStats();
     renderFeatured();
+    showFeaturedPage(0, false);
+    initFeatured();
     renderShops();
     renderPackage();
     renderSystems();
@@ -120,7 +139,7 @@
   function renderFeatured() {
     var host = document.getElementById('home-featured');
     if (!host) return;
-    host.innerHTML = FEATURED.map(function (id, i) {
+    host.innerHTML = FEATURED.map(function (id, index) {
       var s = SC.shipById(id);
       if (!s) return '';
       var media = SC.shipMedia(id) || {};
@@ -128,12 +147,67 @@
       var img = src
         ? '<img src="' + SC.escapeHtml(src) + '" width="1600" height="900" alt="' + SC.escapeHtml(s.name) + ' 飞船外观" loading="lazy" decoding="async">'
         : '<div class="media-fallback"><strong>' + SC.escapeHtml(s.name) + '</strong></div>';
-      return '<a class="featured-card reveal" href="ships.html?ship=' + id + '" style="--i:' + i + '">' +
+      var page = Math.floor(index / FEATURED_PAGE_SIZE);
+      return '<a class="featured-card" href="ships.html?ship=' + id + '" data-page="' + page + '" style="--i:' + (index % FEATURED_PAGE_SIZE) + '"' + (page ? ' hidden' : '') + '>' +
         img +
         '<span class="featured-price">' + (s.usd != null ? SC.fmtUSD(s.usd) : '—') + '</span>' +
         '<span class="featured-copy"><small>' + SC.escapeHtml(SC.manuName(s.maker)) + '</small><b>' + SC.escapeHtml(s.name) + '</b><em>' + SC.escapeHtml(s.role) + '</em></span>' +
       '</a>';
     }).join('');
+  }
+
+  function showFeaturedPage(page, animate) {
+    var host = document.getElementById('home-featured');
+    if (!host) return;
+    featuredPage = page;
+    Array.prototype.forEach.call(host.querySelectorAll('.featured-card'), function (card) {
+      var active = parseInt(card.getAttribute('data-page'), 10) === page;
+      card.hidden = !active;
+      card.classList.remove('featured-enter');
+      if (active && animate) {
+        void card.offsetWidth;
+        card.classList.add('featured-enter');
+      }
+    });
+    preloadFeaturedPage((page + 1) % Math.ceil(FEATURED.length / FEATURED_PAGE_SIZE));
+  }
+
+  function preloadFeaturedPage(page) {
+    window.setTimeout(function () {
+      FEATURED.slice(page * FEATURED_PAGE_SIZE, (page + 1) * FEATURED_PAGE_SIZE).forEach(function (id) {
+        var media = SC.shipMedia(id) || {};
+        var src = media.hero || media.card;
+        if (src) {
+          var img = new Image();
+          img.src = src;
+        }
+      });
+    }, 1200);
+  }
+
+  function startFeaturedRotation() {
+    pauseFeatured();
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (FEATURED.length <= FEATURED_PAGE_SIZE) return;
+    featuredTimer = setInterval(function () {
+      var next = (featuredPage + 1) % Math.ceil(FEATURED.length / FEATURED_PAGE_SIZE);
+      showFeaturedPage(next, true);
+    }, 9000);
+  }
+
+  function pauseFeatured() {
+    if (featuredTimer) clearInterval(featuredTimer);
+    featuredTimer = null;
+  }
+
+  function initFeatured() {
+    var host = document.getElementById('home-featured');
+    if (!host) return;
+    document.addEventListener('visibilitychange', function () {
+      if (document.hidden) pauseFeatured();
+      else startFeaturedRotation();
+    });
+    startFeaturedRotation();
   }
 
   /* ---------- 商店网络 ---------- */
@@ -148,7 +222,10 @@
       if (!d || !l) return '';
       var allShops = d.shops || [];
       var names = allShops.slice(0, 3).join(' · ') + (allShops.length > 3 ? ' +' + (allShops.length - 3) : '');
-      return '<a class="shop-card reveal" href="systems.html?loc=' + id + '" style="--i:' + i + '">' +
+      var media = SHOP_MEDIA[id];
+      var mediaUrl = media ? new URL(media, window.location.href).href : '';
+      var style = '--i:' + i + (mediaUrl ? ';--shop-img:url(' + mediaUrl + ')' : '');
+      return '<a class="shop-card reveal" href="systems.html?loc=' + id + '" style="' + style + '">' +
         '<div class="shop-card-top"><span class="shop-kicker">' + SC.escapeHtml((SC.systemById(l.system) || {}).name) + ' · ' + SC.typeLabels[l.type] + '</span><span class="shop-index">0' + (i + 1) + '</span></div>' +
         '<h3>' + SC.escapeHtml(SC.zhName(l)) + '</h3>' +
         '<p class="shop-names">' + SC.escapeHtml(names) + '</p>' +
@@ -185,18 +262,19 @@
     if (!host) return;
     host.innerHTML = SC.systems.map(function (system, idx) {
       var locs = SC.locationsBySystem(system.id);
-      var media = SC.systemMedia(system.id) || {};
-      var map = media.preview || media.map || '';
-      var img = map
-        ? '<img src="' + SC.escapeHtml(map) + '" width="800" height="800" alt="' + SC.escapeHtml(system.name) + ' 星图" loading="lazy" decoding="async">'
-        : '<div class="media-fallback"><strong>' + SC.escapeHtml(system.name) + '</strong></div>';
+      var art = 'assets/img/systems/' + system.id + '-card.webp';
+      var planets = locs.filter(function (l) { return l.type === 'planet'; }).length;
+      var stations = locs.filter(function (l) { return l.type === 'station'; }).length;
+      var jurisdiction = system.id === 'pyro' ? '无政府' : (system.id === 'nyx' ? '无法地带' : 'UEE 管辖');
+      var tags = [planets + ' 行星'];
+      if (stations) tags.push(stations + ' 空间站');
+      tags.push(jurisdiction);
       return '<a class="system-card reveal" href="systems.html?system=' + system.id + '" style="--i:' + idx + '">' +
-        '<div class="system-card-map">' + img + '</div>' +
+        '<div class="system-card-map"><img src="' + art + '" width="1600" height="900" alt="' + SC.escapeHtml(system.name) + ' 星系图" loading="lazy" decoding="async"></div>' +
         '<div class="system-card-body">' +
-          '<div class="kicker">System // ' + String(idx + 1).padStart(2, '0') + '</div>' +
-          '<h3>' + SC.escapeHtml(system.name) + '<small>' + system.en + '</small></h3>' +
+          '<h3>' + SC.escapeHtml(system.name) + '<small>' + SC.escapeHtml(system.en) + '</small></h3>' +
           '<p>' + SC.escapeHtml((window.SC_SYSTEM_COPY && SC_SYSTEM_COPY[system.id]) || system.desc) + '</p>' +
-          '<div class="system-tags"><span>' + locs.filter(function (l) { return l.type === 'station'; }).length + ' 空间站</span><span>' + (system.id === 'pyro' ? '无政府' : (system.id === 'nyx' ? '无法地带' : 'UEE 管辖')) + '</span></div>' +
+          '<div class="system-tags">' + tags.map(function (t) { return '<span>' + t + '</span>'; }).join('') + '</div>' +
           '<span class="system-card-link">打开航图 <span class="arrow">→</span></span>' +
         '</div>' +
       '</a>';
