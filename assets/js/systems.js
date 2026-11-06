@@ -20,7 +20,7 @@ const componentMeta = window.SC_COMPONENT_META || { types: {}, classes: {} };
 const componentTypes = componentMeta.types || {};
 const componentClasses = componentMeta.classes || {};
 const componentTypeLabel = (type) => (componentTypes[type] && componentTypes[type].label) || type;
-const componentClassLabel = (value) => componentClasses[value] || value || '';
+const componentClassLabel = (value) => value ? (componentClasses[value] || value) : '';
 const componentOrder = { power: 0, shield: 1, cooler: 2, quantum: 3, weapon: 4, missile: 5, missilelauncher: 6, bomb: 7, radar: 8, fueltank: 9, fuelintake: 10, qig: 11, emp: 12, turret: 13, tractor: 14, mining: 15, salvage: 16 };
 const weaponComponentTypes = { weapon: 1, missile: 1, missilelauncher: 1, bomb: 1 };
 const weaponComponentKind = (entry) => {
@@ -73,10 +73,10 @@ const state = {
 
 const atlasState = {
   yaw: 0.35,
-  pitch: 0.48,
+  pitch: 0.78,
   distance: 112,
   yawGoal: 0.35,
-  pitchGoal: 0.48,
+  pitchGoal: 0.78,
   distanceGoal: 112,
   auto: true,
   dragging: null,
@@ -85,6 +85,11 @@ const atlasState = {
   focus: null,
   tween: null,
   fullscreen: false,
+  expanding: false,
+  expandRect: null,
+  expandRadius: null,
+  expandTimer: null,
+  expandBackdrop: null,
   detailId: null,
   target: new THREE.Vector3(),
   targetGoal: new THREE.Vector3(),
@@ -109,6 +114,8 @@ let atlasH = 1;
 let lastFrame = 0;
 let elapsed = 0;
 let labelTimer = 0;
+let zoomAnchor = null;
+let zoomAnchorTimer = null;
 let atlasClickTimer = null;
 let suppressClick = false;
 let lastHoverPick = 0;
@@ -152,7 +159,7 @@ function makeCityIconTexture() {
 
 function layoutSystem(systemId) {
   const system = systemById(systemId);
-  const all = SC.locations.filter((loc) => loc.system === systemId && !(SC.isHiddenLocation && SC.isHiddenLocation(loc.id)));
+  const all = SC.locations.filter((loc) => loc.system === systemId && !(SC.isHiddenLocation && SC.isHiddenLocation(loc.id)) && !(loc.type === 'station' && /-l\d$/i.test(loc.id)));
   const byName = {};
   all.forEach((loc) => { byName[loc.name] = loc; });
   const planets = all.filter((loc) => loc.type === 'planet');
@@ -219,25 +226,61 @@ function layoutSystem(systemId) {
   });
 
   const stationHost = { checkmate: 'monox', ruin: 'terminus', orbituary: 'bloom', starlight: 'bloom' };
-  const stationAngle = { checkmate: 0.85, ruin: 3.55, orbituary: 2.35, starlight: 5.35 };
+  const gatewayJumps = {
+    'pyro-gateway': 'stanton-pyro-jump',
+    'terra-gateway': 'stanton-terra-jump',
+    'nyx-gateway': 'stanton-nyx-jump',
+    'stanton-gateway-pyro': 'pyro-jump',
+    'nyx-gateway-pyro': 'pyro-nyx-jump',
+    'pyro-gateway-nyx': 'nyx-pyro-jump',
+    'stanton-gateway-nyx': 'nyx-stanton-jump'
+  };
+  const jumpAngles = {};
+  all.filter((loc) => loc.type === 'jump').forEach((jump) => {
+    jumpAngles[jump.id] = Math.atan2((jump.mapY || 350) - 350, (jump.mapX || 600) - 600);
+  });
+  const stationAngle = { checkmate: 0.85, ruin: 3.55, orbituary: 2.35, starlight: 5.35, 'patch-city': 2.75, gaslight: 1.65, 'rats-nest': 4.95, endgame: 2.75, 'megumi-refueling': 4.95, 'rods-fuel': 3.85, 'dudley-daughters': 3.85 };
+  const stationLagrange = { gaslight: 2, 'rats-nest': 5, 'rods-fuel': 4, endgame: 3, 'megumi-refueling': 5, 'dudley-daughters': 4, 'patch-city': 3, checkmate: 4, starlight: 1 };
   all.filter((loc) => loc.type === 'station').forEach((loc) => {
     const hostId = stationHost[loc.id];
     const host = (hostId && SC.locationById(hostId)) || byName[loc.parent];
     const hp = host && positions[host.id];
-    const angle = stationAngle[loc.id] != null ? stationAngle[loc.id] : (parseInt(loc.id.replace(/\D/g, ''), 10) || 1) * 0.7;
-    if (hp) {
-      const r = loc.id === 'starlight' ? 8.2 : (host.type === 'moon' ? 3 : 6.6);
+    const parsedLagrange = (loc.name.match(/-L(\d)/i) || [])[1];
+    const lagrange = Number(stationLagrange[loc.id] || parsedLagrange || 0);
+    const angle = stationAngle[loc.id] != null ? stationAngle[loc.id] : (lagrange ? (lagrange - 1) * 1.1 + 0.55 : 2.3);
+    if (hp && lagrange) {
+      const orbitRadius = Math.hypot(hp.position.x, hp.position.z);
+      const orbitAngle = Math.atan2(hp.position.z, hp.position.x);
+      const clearance = Math.max((host.radius || 3.6) * 2.6, 7.5);
+      let stationRadius = orbitRadius;
+      let stationAngle = orbitAngle;
+      if (lagrange === 1) { stationRadius = Math.max(orbitRadius - clearance, 13); stationAngle = orbitAngle; }
+      else if (lagrange === 2) { stationRadius = orbitRadius + clearance; stationAngle = orbitAngle; }
+      else if (lagrange === 3) { stationRadius = orbitRadius + clearance * 1.15; stationAngle = orbitAngle + Math.PI; }
+      else if (lagrange === 4) { stationAngle = orbitAngle + Math.PI / 3; }
+      else if (lagrange === 5) { stationAngle = orbitAngle - Math.PI / 3; }
+      add(loc, Math.cos(stationAngle) * stationRadius, 0.4, Math.sin(stationAngle) * stationRadius, {
+        radius: 0.5, color: shopBuy(loc.id) ? '#ff9f0a' : (isShop(loc.id) ? '#64d2ff' : '#a9c3d2'),
+        priority: 2,
+        host: { id: host.id, position: hp.position }
+      });
+    } else if (hp) {
+      const r = loc.id === 'starlight' ? 14 : Math.max((host.radius || 3.6) * 4.15, 13.5);
       add(loc, hp.position.x + Math.cos(angle) * r, 0.4, hp.position.z + Math.sin(angle) * r, {
-        radius: 0.22, color: shopBuy(loc.id) ? '#ff9f0a' : (isShop(loc.id) ? '#64d2ff' : '#8997a3'),
-        priority: isShop(loc.id) ? (shopBuy(loc.id) ? 2 : 3) : 3,
+        radius: 0.5, color: shopBuy(loc.id) ? '#ff9f0a' : (isShop(loc.id) ? '#64d2ff' : '#a9c3d2'),
+        priority: 2,
         host: { id: host.id, position: hp.position }
       });
     } else {
-      const a = Math.atan2((loc.mapY || 350) - 350, (loc.mapX || 600) - 600);
-      add(loc, Math.cos(a) * 58, 0.5, Math.sin(a) * 58, {
-        radius: 0.22,
-        color: isShop(loc.id) ? '#64d2ff' : '#8997a3',
-        priority: 3
+      const jumpId = gatewayJumps[loc.id];
+      const a = jumpId && jumpAngles[jumpId] != null
+        ? jumpAngles[jumpId]
+        : Math.atan2((loc.mapY || 350) - 350, (loc.mapX || 600) - 600);
+      const gatewayRadius = jumpId ? (loc.system === 'nyx' ? 38 : 66) : 68;
+      add(loc, Math.cos(a) * gatewayRadius, 0.5, Math.sin(a) * gatewayRadius, {
+        radius: 0.5,
+        color: isShop(loc.id) ? '#64d2ff' : '#a9c3d2',
+        priority: 2
       });
     }
   });
@@ -258,7 +301,8 @@ function layoutSystem(systemId) {
 
   all.filter((loc) => loc.type === 'jump').forEach((loc) => {
     const a = Math.atan2((loc.mapY || 350) - 350, (loc.mapX || 600) - 600);
-    add(loc, Math.cos(a) * 62, 0.4, Math.sin(a) * 62, { radius: 0.52, color: '#30d158', priority: 4 });
+    const jumpRadius = systemId === 'nyx' ? 36 : 62;
+    add(loc, Math.cos(a) * jumpRadius, 0.4, Math.sin(a) * jumpRadius, { radius: 0.52, color: '#30d158', priority: 4 });
   });
 
   nodes.sort((a, b) => b.priority - a.priority);
@@ -597,7 +641,34 @@ function buildSystem(systemId) {
         new THREE.MeshStandardMaterial({ map: texture || null, color: texture ? 0xffffff : 0x8997a3, roughness: 1 })
       );
     } else if (loc.type === 'station') {
-      mesh = makeStationModel(loc.id);
+      const restStop = /-l\d$/i.test(loc.id);
+      const beaconColor = node.buy ? 0xff9f0a : (node.shop ? 0x64d2ff : 0xa9c3d2);
+      if (restStop) {
+        // Lagrange rest stops are beacons, not large models; this keeps the
+        // orbital diagram readable and prevents station meshes from covering planets.
+        mesh = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture, color: beaconColor, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0.62 }));
+        mesh.scale.set(0.82, 0.82, 1);
+        mesh.userData.stationBeacon = true;
+      } else {
+        mesh = makeStationModel(loc.id);
+        mesh.scale.setScalar(0.56);
+      }
+      const beacon = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture, color: beaconColor, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0.32 }));
+      beacon.scale.set(1.45, 1.45, 1);
+      beacon.position.copy(node.position);
+      beacon.userData.stationBeacon = true;
+      systemGroup.add(beacon);
+      node.beacon = beacon;
+      const halo = new THREE.Mesh(
+        new THREE.RingGeometry(0.5, 0.62, 48),
+        new THREE.MeshBasicMaterial({ color: beaconColor, transparent: true, opacity: 0.42, side: THREE.DoubleSide, depthWrite: false })
+      );
+      halo.rotation.x = Math.PI / 2;
+      halo.position.copy(node.position);
+      halo.userData.id = loc.id;
+      halo.userData.stationHalo = true;
+      systemGroup.add(halo);
+      node.halo = halo;
     } else if (loc.type === 'jump') {
       mesh = makeJumpGateModel(loc.id);
     } else if (loc.type === 'landing') {
@@ -639,7 +710,9 @@ function createLabel(node) {
   button.dataset.id = node.id;
   button.dataset.priority = node.priority;
   const primary = zhName(node.loc);
-  const secondary = `${node.loc.name} · ${typeLabel(node.loc.type)}`;
+  const secondary = node.loc.type === 'station'
+    ? (/空间站|站$/.test(primary) ? '' : '空间站')
+    : `${node.loc.name} · ${typeLabel(node.loc.type)}`;
   const dot = node.loc.type === 'planet' ? '' : `<span class="atlas-node-dot">${markerIcon(node.loc.type)}</span>`;
   button.innerHTML = dot + `<span class="atlas-node-label"><b>${esc(primary)}</b><small>${esc(secondary)}</small></span>`;
   button.addEventListener('click', (event) => {
@@ -660,7 +733,9 @@ function updateLabelVisibility() {
     if (!label) return;
     const visible = focus
       ? (!!(node.host && node.host.id === focus) && !atlasState.dragging && !atlasState.auto)
-      : (atlasState.selected === node.id || atlasState.hover === node.id || node.priority <= level);
+      : (atlasState.selected === node.id || atlasState.hover === node.id
+        || (node.loc.type === 'station' && node.shop)
+        || node.priority <= level);
     label.classList.toggle('show', visible);
     label.classList.toggle('hidden', !visible);
     label.classList.toggle('selected', atlasState.selected === node.id);
@@ -672,25 +747,36 @@ function updateLabelPositions() {
   if (!atlasState.layout || !camera || !labelLayer) return;
   const camDir = new THREE.Vector3();
   camera.getWorldDirection(camDir);
-  Object.values(atlasState.labels).forEach((label) => label.classList.remove('collide'));
+  Object.values(atlasState.labels).forEach((label) => { label.classList.remove('collide'); label.classList.remove('offscreen'); });
+  const camRight = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 0);
   atlasState.layout.nodes.forEach((node) => {
     const label = atlasState.labels[node.id];
     if (!label || label.classList.contains('hidden')) return;
     const direction = node.position.clone().sub(camera.position);
-    if (direction.dot(camDir) < 0.3) { label.classList.add('hidden'); return; }
+    if (direction.dot(camDir) < -0.2) { label.classList.add('offscreen'); return; }
     if (node.surface && node.host) {
       const normal = node.position.clone().sub(node.host.position).normalize();
       const toCamera = camera.position.clone().sub(node.position).normalize();
-      if (normal.dot(toCamera) <= 0.03) { label.classList.add('hidden'); return; }
+      if (normal.dot(toCamera) <= 0.03) { label.classList.add('offscreen'); return; }
     }
     const projected = node.position.clone().project(camera);
-    if (projected.z < -1 || projected.z > 1) { label.classList.add('hidden'); return; }
+    if (projected.z < -1 || projected.z > 1) { label.classList.add('offscreen'); return; }
     const x = (projected.x * .5 + .5) * atlasW;
     const y = (-projected.y * .5 + .5) * atlasH;
-    if (x < 10 || x > atlasW - 10 || y < 10 || y > atlasH - 10) { label.classList.add('hidden'); return; }
+    if (x < 2 || x > atlasW - 2 || y < 2 || y > atlasH - 2) { label.classList.add('offscreen'); return; }
     const leftSide = x > atlasW * 0.57;
-    const yOffset = node.loc.type === 'planet' ? -14 : (node.loc.id === 'ruin' ? -38 : (node.shop ? 15 : 0));
-    label.style.left = `${x + (leftSide ? -11 : 11)}px`;
+    const yOffset = node.loc.type === 'planet' ? -14 : (node.loc.id === 'ruin' ? -38 : (node.loc.type === 'station' ? 0 : (node.shop ? 10 : 0)));
+    let anchor = 11;
+    if (node.loc.type === 'planet') {
+      const edge = node.position.clone().add(camRight.clone().multiplyScalar(node.radius || 3.6)).project(camera);
+      const edgeX = (edge.x * .5 + .5) * atlasW;
+      anchor = Math.max(11, Math.abs(edgeX - x) + 9);
+    }
+    label.dataset.x = x;
+    label.dataset.y = y;
+    label.dataset.dy = yOffset;
+    label.dataset.anchor = anchor;
+    label.style.left = `${x + (leftSide ? -anchor : anchor)}px`;
     label.style.top = `${y + yOffset}px`;
     label.style.transform = leftSide ? 'translate(-100%, -50%)' : 'translate(0, -50%)';
     label.classList.toggle('label-left', leftSide);
@@ -703,22 +789,87 @@ function updateLabelPositions() {
       return label && !label.classList.contains('hidden');
     })
     .sort((a, b) => {
-      const rank = (node) => (node.id === atlasState.selected || node.id === atlasState.hover) ? 0 : (node.loc.type === 'planet' ? 1 : (node.loc.type === 'landing' ? 2 : (node.shop ? 3 : 4)));
+      const rank = (node) => (node.id === atlasState.selected || node.id === atlasState.hover) ? 0
+        : (node.loc.type === 'planet' ? 1
+          : (node.loc.type === 'station' ? 2
+            : (node.loc.type === 'landing' ? 3 : (node.shop ? 4 : 5))));
       return rank(a) - rank(b) || a.priority - b.priority;
     });
+
+  /* The star is the brightest object on screen; keep labels off its disc. */
+  let starBox = null;
+  const starCenter = new THREE.Vector3(0, 0, 0).project(camera);
+  const starEdge = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 0).multiplyScalar(9.2).project(camera);
+  const scx = (starCenter.x * .5 + .5) * atlasW;
+  const scy = (-starCenter.y * .5 + .5) * atlasH;
+  const sex = (starEdge.x * .5 + .5) * atlasW;
+  const sey = (-starEdge.y * .5 + .5) * atlasH;
+  const starRadius = Math.hypot(sex - scx, sey - scy);
+  if (isFinite(starRadius) && starRadius > 0) {
+    starBox = { left: scx - starRadius - 8, right: scx + starRadius + 8, top: scy - starRadius - 8, bottom: scy + starRadius + 8 };
+  }
+
   const boxes = [];
+  const hitsBox = (box) => boxes.some((b) => !(box.right < b.left || box.left > b.right || box.bottom < b.top || box.top > b.bottom));
+  const hitsStar = (box) => !!starBox && !(box.right < starBox.left || box.left > starBox.right || box.bottom < starBox.top || box.top > starBox.bottom);
+  const outside = (box) => box.left < 4 || box.right > atlasW - 4 || box.top < 4 || box.bottom > atlasH - 4;
+
   visible.forEach((node) => {
     const label = atlasState.labels[node.id];
-    if (node.id !== atlasState.selected && label.classList.contains('label-up') && node.shop) {
-      // label-up is only a fallback near the bottom edge
+    const x = Number(label.dataset.x);
+    const y = Number(label.dataset.y);
+    const dy = Number(label.dataset.dy) || 0;
+    const w = label.offsetWidth;
+    const h = label.offsetHeight;
+    if (!w || !h || !isFinite(x) || !isFinite(y)) return;
+    const primaryLeft = x > atlasW * 0.57;
+    const candidates = [
+      { left: primaryLeft, dy: dy },
+      { left: !primaryLeft, dy: dy },
+      { left: primaryLeft, dy: dy - 26 },
+      { left: primaryLeft, dy: dy + 26 },
+      { left: !primaryLeft, dy: dy - 26 },
+      { left: !primaryLeft, dy: dy + 26 }
+    ];
+    const anchor = Number(label.dataset.anchor) || 11;
+    const boxFor = (candidate) => {
+      const anchorX = x + (candidate.left ? -anchor : anchor);
+      const left = candidate.left ? anchorX - w - 4 : anchorX - 4;
+      const top = y + candidate.dy - h / 2 - 3;
+      return { left: left, right: left + w + 8, top: top, bottom: top + h + 6 };
+    };
+    let chosen = null;
+    if (node.id === atlasState.selected || node.id === atlasState.hover) {
+      chosen = { candidate: candidates[0], box: boxFor(candidates[0]) };
+    } else {
+      /* Prefer a spot clear of other labels, the star, and the canvas edge. */
+      for (const candidate of candidates) {
+        const box = boxFor(candidate);
+        if (!hitsBox(box) && !hitsStar(box) && !outside(box)) { chosen = { candidate: candidate, box: box }; break; }
+      }
+      if (!chosen) {
+        for (const candidate of candidates) {
+          const box = boxFor(candidate);
+          if (!hitsBox(box)) { chosen = { candidate: candidate, box: box }; break; }
+        }
+      }
     }
-    const rect = label.getBoundingClientRect();
-    if (!rect.width || !rect.height) return;
-    const box = { left: rect.left - 4, top: rect.top - 3, right: rect.right + 4, bottom: rect.bottom + 3 };
-    if (node.id === atlasState.selected) { boxes.push(box); return; }
-    const hit = boxes.some((b) => !(box.right < b.left || box.left > b.right || box.bottom < b.top || box.top > b.bottom));
-    if (hit) label.classList.add('collide');
-    else boxes.push(box);
+    if (!chosen) { label.classList.add('collide'); return; }
+    const candidate = chosen.candidate;
+    let left = x + (candidate.left ? -anchor : anchor);
+    let top = y + candidate.dy;
+    /* Keep the whole label inside the canvas, even for edge nodes. */
+    const box = chosen.box;
+    if (box.left < 4) left += 4 - box.left;
+    else if (box.right > atlasW - 4) left -= box.right - (atlasW - 4);
+    if (box.top < 4) top += 4 - box.top;
+    else if (box.bottom > atlasH - 4) top -= box.bottom - (atlasH - 4);
+    label.style.left = `${left}px`;
+    label.style.top = `${top}px`;
+    label.style.transform = candidate.left ? 'translate(-100%, -50%)' : 'translate(0, -50%)';
+    label.classList.toggle('label-left', candidate.left);
+    label.classList.remove('label-up');
+    boxes.push(chosen.box);
   });
 }
 
@@ -847,7 +998,7 @@ function leaveFocus() {
   updateFocusHud();
   updateLabelVisibility();
   const yaw = atlasState.fullscreen ? 0.35 : atlasState.yaw;
-  const pitch = atlasState.fullscreen ? 0.48 : atlasState.pitch;
+  const pitch = atlasState.fullscreen ? 0.78 : atlasState.pitch;
   startCameraTween({ target: new THREE.Vector3(0, 0, 0), distance: 112, yaw, pitch }, 1.15);
   const stage = $('#atlas-stage');
   if (stage) stage.classList.remove('is-focused');
@@ -884,7 +1035,7 @@ function updateFocusHud() {
     const story = storyFor(loc);
     const siteNames = sites.map((item) => zhName(item.loc)).filter(Boolean).join('、');
     const summary = `该行星记录有 ${moons} 颗卫星与 ${sites.length} 个可访问地点${siteNames ? '，主要地点包括' + siteNames : ''}。`;
-    const body = story ? story.story.map((paragraph) => `<p>${esc(paragraph)}</p>`).join('') : `<p>${esc(SC.zhText(loc.desc || ''))}</p>`;
+    const body = story ? story.story.map((paragraph) => `<p>${esc(SC.localizeShopText ? SC.localizeShopText(paragraph) : paragraph)}</p>`).join('') : `<p>${esc(SC.localizeShopText ? SC.localizeShopText(SC.zhText(loc.desc || '')) : SC.zhText(loc.desc || ''))}</p>`;
     storyHost.innerHTML = body;
   }
   if (sitesHost) {
@@ -939,11 +1090,30 @@ function updateFullscreenButton() {
 
 function toggleFullscreen(force) {
   const stage = $('#atlas-stage');
-  if (!stage) return;
+  if (!stage || atlasState.expanding) return;
   const entering = force == null ? !atlasState.fullscreen : force;
-  // Fullscreen is the system overview. Never inherit a planet focus from a
-  // previous pointer position or from the click that opened fullscreen.
-  if (entering && !atlasState.fullscreen) {
+  if (entering === atlasState.fullscreen) return;
+
+  const clearStageStyles = () => {
+    ['position', 'left', 'top', 'right', 'bottom', 'inset', 'width', 'height',
+      'borderRadius', 'zIndex', 'boxShadow', 'margin', 'transition', 'transform', 'transformOrigin', 'willChange'].forEach((key) => {
+      stage.style[key] = '';
+    });
+  };
+  const removeBackdrop = (backdrop, delay) => {
+    window.setTimeout(() => {
+      backdrop.remove();
+      if (atlasState.expandBackdrop === backdrop) atlasState.expandBackdrop = null;
+    }, delay || 0);
+  };
+
+  atlasState.expanding = true;
+  const backdrop = document.createElement('div');
+  backdrop.className = 'atlas-expand-backdrop';
+  document.body.appendChild(backdrop);
+  atlasState.expandBackdrop = backdrop;
+
+  if (entering) {
     restorePlanetDetail();
     atlasState.focus = null;
     atlasState.selected = null;
@@ -953,21 +1123,98 @@ function toggleFullscreen(force) {
     updateLabelVisibility();
     const hint = $('#atlas-hint');
     if (hint) hint.classList.remove('hidden');
+
+    const rect = stage.getBoundingClientRect();
+    const radius = getComputedStyle(stage).borderRadius || '18px';
+    atlasState.expandRect = { left: rect.left, top: rect.top, width: rect.width, height: rect.height };
+    atlasState.expandRadius = radius;
+    atlasState.fullscreen = true;
+    updateFullscreenButton();
+
+    document.body.classList.add('atlas-expanding');
+    stage.classList.add('is-expanding');
+    stage.style.position = 'fixed';
+    stage.style.inset = '0';
+    stage.style.left = '0';
+    stage.style.top = '0';
+    stage.style.width = '100vw';
+    stage.style.height = '100vh';
+    stage.style.margin = '0';
+    stage.style.borderRadius = radius;
+    stage.style.zIndex = '9999';
+    stage.style.boxShadow = '0 34px 120px rgba(0,0,0,.55)';
+    stage.style.transformOrigin = '0 0';
+    stage.style.transform = 'translate(' + rect.left + 'px,' + rect.top + 'px) scale(' +
+      (rect.width / window.innerWidth) + ',' + (rect.height / window.innerHeight) + ')';
+    resizeAtlas(window.innerWidth, window.innerHeight);
+    void stage.offsetWidth;
+
+    window.setTimeout(() => {
+      stage.style.transform = 'translate(0px,0px) scale(1,1)';
+      stage.style.borderRadius = '0px';
+      backdrop.classList.add('show');
+    }, 30);
+
+    atlasState.expandTimer = window.setTimeout(() => {
+      stage.classList.remove('is-expanding');
+      stage.classList.add('is-fullscreen');
+      clearStageStyles();
+      stage.style.transition = 'none';
+      void stage.offsetWidth;
+      stage.style.transition = '';
+      document.body.classList.remove('atlas-expanding');
+      document.body.classList.add('atlas-fullscreen');
+      backdrop.classList.remove('show');
+      removeBackdrop(backdrop, 520);
+      atlasState.expanding = false;
+      window.setTimeout(() => {
+        resizeAtlas();
+        startCameraTween({ target: new THREE.Vector3(0, 0, 0), distance: 112, yaw: atlasState.yaw, pitch: atlasState.pitch }, 0.9);
+      }, 30);
+    }, 680);
+  } else {
+    const rect = atlasState.expandRect || stage.getBoundingClientRect();
+    const radius = atlasState.expandRadius || '18px';
+    atlasState.fullscreen = false;
+    updateFullscreenButton();
+
+    document.body.classList.add('atlas-expanding');
+    stage.classList.add('is-expanding');
+    stage.style.position = 'fixed';
+    stage.style.inset = '0';
+    stage.style.left = '0';
+    stage.style.top = '0';
+    stage.style.width = '100vw';
+    stage.style.height = '100vh';
+    stage.style.margin = '0';
+    stage.style.borderRadius = '0px';
+    stage.style.zIndex = '9999';
+    stage.style.transformOrigin = '0 0';
+    stage.style.transform = 'translate(0px,0px) scale(1,1)';
+    backdrop.classList.add('show');
+    void stage.offsetWidth;
+
+    window.setTimeout(() => {
+      stage.style.transform = 'translate(' + rect.left + 'px,' + rect.top + 'px) scale(' +
+        (rect.width / window.innerWidth) + ',' + (rect.height / window.innerHeight) + ')';
+      stage.style.borderRadius = radius;
+      stage.style.boxShadow = '0 34px 120px rgba(0,0,0,.55)';
+      backdrop.classList.remove('show');
+    }, 30);
+
+    atlasState.expandTimer = window.setTimeout(() => {
+      stage.classList.remove('is-expanding', 'is-fullscreen');
+      clearStageStyles();
+      stage.style.transition = 'none';
+      void stage.offsetWidth;
+      stage.style.transition = '';
+      document.body.classList.remove('atlas-fullscreen', 'atlas-expanding');
+      backdrop.remove();
+      atlasState.expandBackdrop = null;
+      atlasState.expanding = false;
+      window.setTimeout(() => resizeAtlas(), 30);
+    }, 680);
   }
-  atlasState.fullscreen = entering;
-  const warp = document.createElement('div');
-  warp.className = 'atlas-warp-flash';
-  stage.appendChild(warp);
-  setTimeout(() => warp.remove(), 950);
-  stage.classList.toggle('is-fullscreen', atlasState.fullscreen);
-  document.body.classList.toggle('atlas-fullscreen', atlasState.fullscreen);
-  updateFullscreenButton();
-  requestAnimationFrame(() => {
-    resizeAtlas();
-    if (atlasState.fullscreen) {
-      startCameraTween({ target: new THREE.Vector3(0, 0, 0), distance: 112, yaw: atlasState.yaw, pitch: atlasState.pitch }, 0.9);
-    }
-  });
 }
 
 function bindAtlas() {
@@ -1035,20 +1282,34 @@ function bindAtlas() {
     atlasClickTimer = null;
     toggleFullscreen();
   });
-  let fullscreenWheelTimer = null;
   canvas.addEventListener('wheel', (event) => {
     event.preventDefault();
     atlasState.tween = null;
     const range = zoomRange();
-    atlasState.distanceGoal = Math.max(range.min, Math.min(range.max, atlasState.distanceGoal * (event.deltaY < 0 ? 0.9 : 1.1)));
+    const oldDistance = atlasState.distanceGoal;
+    const nextDistance = Math.max(range.min, Math.min(range.max, oldDistance * (event.deltaY < 0 ? 0.9 : 1.1)));
+    const hoverNode = atlasState.hover && atlasState.layout && atlasState.layout.positions[atlasState.hover];
+    let anchor = hoverNode ? hoverNode.position : null;
+    if (!anchor && camera) {
+      const bounds = canvas.getBoundingClientRect();
+      pointer.x = ((event.clientX - bounds.left) / bounds.width) * 2 - 1;
+      pointer.y = -((event.clientY - bounds.top) / bounds.height) * 2 + 1;
+      raycaster.setFromCamera(pointer, camera);
+      const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+      const hit = new THREE.Vector3();
+      if (raycaster.ray.intersectPlane(plane, hit)) anchor = hit;
+    }
+    if (anchor) {
+      const ratio = nextDistance / oldDistance;
+      const offset = atlasState.targetGoal.clone().sub(anchor).multiplyScalar(ratio);
+      atlasState.targetGoal.copy(anchor).add(offset);
+    }
+    atlasState.distanceGoal = nextDistance;
+    if (atlasState.distanceGoal >= 108) atlasState.targetGoal.set(0, 0, 0);
+    clearTimeout(zoomAnchorTimer);
+    zoomAnchorTimer = window.setTimeout(() => { zoomAnchor = null; }, 220);
     atlasState.auto = false;
     updateAutoButton();
-    if (event.deltaY < 0 && !atlasState.fullscreen && atlasState.distanceGoal < 46) {
-      clearTimeout(fullscreenWheelTimer);
-      fullscreenWheelTimer = setTimeout(() => {
-        if (!atlasState.fullscreen && atlasState.distanceGoal < 50) toggleFullscreen(true);
-      }, 260);
-    }
   }, { passive: false });
 
   const focusHost = $('#atlas-focus');
@@ -1079,7 +1340,7 @@ function bindAtlas() {
       if (action === 'reset') {
         restorePlanetDetail();
         atlasState.tween = null;
-        atlasState.yawGoal = 0.35; atlasState.pitchGoal = 0.48; atlasState.distanceGoal = 112;
+        atlasState.yawGoal = 0.35; atlasState.pitchGoal = 0.78; atlasState.distanceGoal = 112;
         atlasState.focus = null; atlasState.selected = null; atlasState.hover = null; atlasState.targetGoal.set(0, 0, 0);
         atlasState.auto = true; updateAutoButton(); updateFocusHud();
         const stage = $('#atlas-stage'); if (stage) stage.classList.remove('is-focused');
@@ -1091,6 +1352,8 @@ function bindAtlas() {
   window.addEventListener('resize', resizeAtlas);
   document.addEventListener('keydown', (event) => {
     if (event.key !== 'Escape' || (els.dialog && els.dialog.open)) return;
+    const search = document.getElementById('search-overlay');
+    if (search && !search.hidden) return;
     if (atlasState.fullscreen) { toggleFullscreen(false); return; }
     if (atlasState.focus) leaveFocus();
   });
@@ -1101,10 +1364,11 @@ function updateAutoButton() {
   if (dot) dot.classList.toggle('active', atlasState.auto);
 }
 
-function resizeAtlas() {
+function resizeAtlas(width, height) {
   if (!renderer || !camera) return;
-  atlasW = els.canvas.clientWidth;
-  atlasH = els.canvas.clientHeight;
+  atlasW = width || els.canvas.clientWidth;
+  atlasH = height || els.canvas.clientHeight;
+  if (!atlasW || !atlasH) return;
   renderer.setSize(atlasW, atlasH);
   camera.aspect = atlasW / atlasH;
   camera.updateProjectionMatrix();
@@ -1132,7 +1396,7 @@ function animate(t) {
     atlasState.yaw = lerp(atlasState.yaw, atlasState.yawGoal, 0.06);
     atlasState.pitch = lerp(atlasState.pitch, atlasState.pitchGoal, 0.06);
     atlasState.distance = lerp(atlasState.distance, atlasState.distanceGoal, 0.06);
-    atlasState.target.lerp(atlasState.targetGoal, 0.07);
+    atlasState.target.lerp(atlasState.targetGoal, 0.1);
   }
   const r = atlasState.distance;
   const p = atlasState.pitch;
@@ -1162,12 +1426,13 @@ function animate(t) {
   if (systemGroup) {
     systemGroup.children.forEach((obj) => {
       if (obj.userData && obj.userData.shopRing) { obj.quaternion.copy(camera.quaternion); obj.visible = !atlasState.focus; }
+      if (obj.userData && (obj.userData.stationBeacon || obj.userData.stationHalo)) obj.visible = !atlasState.focus;
       if (obj.userData && obj.userData.station) obj.rotation.y += delta * 0.055;
     });
   }
   labelTimer += delta;
   if (!isFinite(labelTimer)) labelTimer = 0;
-  if (labelTimer > 0.08) {
+  if (labelTimer > 0.12) {
     updateLabelVisibility();
     updateLabelPositions();
     labelTimer = 0;
@@ -1187,13 +1452,25 @@ function initAtlas() {
   atlasH = els.canvas.clientHeight;
   labelLayer = els.labels;
 
-  renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
+  try {
+    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
+  } catch (err) {
+    if (els.loading) els.loading.classList.add('done');
+    const stage = document.getElementById('atlas-stage');
+    if (stage && !stage.querySelector('.atlas-fallback')) {
+      const fallback = document.createElement('div');
+      fallback.className = 'atlas-fallback';
+      fallback.innerHTML = '<b>三维星图无法启动</b><span>当前浏览器或显卡未启用 WebGL。地点与商店列表仍可正常使用；开启硬件加速或更换浏览器后可查看三维星图。</span>';
+      stage.appendChild(fallback);
+    }
+    return;
+  }
   renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
   renderer.setSize(atlasW, atlasH);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.1;
-  renderer.domElement.setAttribute('aria-label', '斯坦顿与派罗三维星系图');
+  renderer.domElement.setAttribute('aria-label', '斯坦顿、派罗与尼克斯三维星系图');
   els.canvas.appendChild(renderer.domElement);
 
   scene = new THREE.Scene();
@@ -1263,7 +1540,7 @@ function renderFilters() {
   const count = (fn) => locations.filter(fn).length;
   const defs = [
     ['all', '全部', locations.length],
-    ['main', '主城', count((l) => l.type === 'landing' || ['checkmate', 'ruin', 'orbituary'].includes(l.id))],
+    ['main', '主要地点', count((l) => l.type === 'landing' || ['checkmate', 'ruin', 'orbituary'].includes(l.id))],
     ['shops', '商店', count((l) => isShop(l.id))],
     ['ships', '有飞船商店', count((l) => { const d = SC_SHOPS.locations[l.id]; return d && d.counts.buy; })],
     ['weapons', '有飞船武器', count((l) => { const d = SC_SHOPS.locations[l.id]; return d && d.counts.weapons; })],
@@ -1332,14 +1609,16 @@ function stockPreview(shop, feature) {
   if (!shop) return '';
   const limit = feature ? 2 : 1;
   const lines = [];
-  if (shop.weapons.length) {
-    const names = shop.weapons.slice().sort((a, b) => a.size - b.size || a.price - b.price).slice(0, limit).map(weaponName).join(' · ');
-    const more = shop.weapons.length - Math.min(limit, shop.weapons.length);
+  const weapons = shop.weapons || [];
+  const rent = shop.rent || [];
+  if (weapons.length) {
+    const names = weapons.slice().sort((a, b) => a.size - b.size || a.price - b.price).slice(0, limit).map(weaponName).join(' · ');
+    const more = weapons.length - Math.min(limit, weapons.length);
     lines.push(`<p class="place-stock-line"><span>飞船武器</span>${esc(names)}${more > 0 ? ` <em>+${more}</em>` : ''}</p>`);
   }
-  if (shop.rent.length) {
-    const names = shop.rent.slice(0, limit).map((item) => { const ship = SC.shipById(item.shipId); return ship ? ship.name : ''; }).filter(Boolean).join(' · ');
-    const more = shop.rent.length - Math.min(limit, shop.rent.length);
+  if (rent.length) {
+    const names = rent.slice(0, limit).map((item) => { const ship = SC.shipById(item.shipId); return ship ? ship.name : ''; }).filter(Boolean).join(' · ');
+    const more = rent.length - Math.min(limit, rent.length);
     if (names) lines.push(`<p class="place-stock-line rent"><span>租赁</span>${esc(names)}${more > 0 ? ` <em>+${more}</em>` : ''}</p>`);
   }
   if (shop.components && shop.components.length) {
@@ -1355,7 +1634,8 @@ function cardMarkup(loc, index) {
   const media = locationMedia(loc);
   const feature = loc.type === 'landing' || ['checkmate', 'ruin', 'orbituary'].includes(loc.id);
   const tagline = story ? (feature ? story.story[0] : story.tagline) : SC.zhText(loc.desc);
-  const countItems = shop ? [['buy', '在售'], ['components', '配件'], ['rent', '租赁']].filter(([key]) => shop.counts[key] > 0) : [];
+  const taglineText = SC.localizeShopText ? SC.localizeShopText(tagline) : tagline;
+  const countItems = shop ? [['buy', '在售'], ['components', '配件'], ['rent', '租赁']].filter(([key]) => ((shop.counts || {})[key] || 0) > 0) : [];
   const counts = countItems.length
     ? `<div class="place-counts">${countItems.map(([key, label]) => `<span><b>${shop.counts[key]}</b>${label}</span>`).join('')}</div>`
     : '';
@@ -1372,11 +1652,11 @@ function cardMarkup(loc, index) {
       ${counts}
     </div>
     <div class="place-body">
-      <p class="place-tagline">${esc(tagline)}</p>
+      <p class="place-tagline">${esc(taglineText)}</p>
       ${facilities ? `<div class="place-facilities">${facilities}</div>` : ''}
       ${stockPreview(shop, feature)}
       ${shipPreview(loc, shop)}
-      <div class="place-foot"><span>${shop ? (shop.counts.buy ? '商店档案 · ' + shop.counts.buy + ' 艘在售' : (shop.counts.components ? '配件档案 · ' + shop.counts.components + ' 件有售' : '商店档案')) : esc(typeLabel(loc.type)) + '档案'}</span><span class="open">${shop ? '查看商品' : '查看地点'} →</span></div>
+      <div class="place-foot"><span>${shop ? (shop.counts.buy ? '商店档案 · ' + shop.counts.buy + ' 艘在售' : (shop.counts.components ? '配件档案 · ' + shop.counts.components + ' 种有售' : '商店档案')) : esc(typeLabel(loc.type)) + '档案'}</span><span class="open">${shop ? '查看商品' : '查看地点'} →</span></div>
     </div>
   </a>`;
 }
@@ -1403,7 +1683,7 @@ function switchSystem(id, updateUrl) {
   $$('[data-system]', els.tabs).forEach((button) => button.classList.toggle('active', button.dataset.system === id));
   if (renderer && texturesReady) buildSystem(id);
   atlasState.focus = null;
-  atlasState.yawGoal = 0.35; atlasState.pitchGoal = 0.48; atlasState.distanceGoal = 112;
+  atlasState.yawGoal = 0.35; atlasState.pitchGoal = 0.78; atlasState.distanceGoal = 112;
   atlasState.targetGoal.set(0, 0, 0);
   atlasState.auto = true; updateAutoButton();
   updateFocusHud();
@@ -1479,13 +1759,15 @@ function stockCard(entry, kind) {
     </article>`;
   }
   if (kind === 'component' || kind === 'components') {
-    const site = entry.site && entry.site !== entry.shop ? ` · ${entry.site}` : '';
+    const displayName = entry.type === 'weapon' ? weaponName(entry) : entry.name;
     const klass = entry.type === 'weapon' && SC.weaponType ? SC.weaponType({ name: entry.en || entry.name }) : componentClassLabel(entry.itemClass);
+    const classText = klass ? ` · ${esc(klass)}` : '';
+    const gradeText = entry.grade ? ` · ${esc(entry.grade)} 级` : '';
     const warning = entry.type === 'weapon' && entry.stats && !entry.stats.dps ? '<p class="stock-warning">点防御发射器，暂无舰炮 DPS。</p>' : '';
     return `<article class="stock-card component">
       <div class="stock-card-head"><span class="stock-size">S${esc(entry.size == null ? '—' : entry.size)}</span><span class="stock-kind">${esc(componentTypeLabel(entry.type))}</span></div>
-      <b class="stock-name">${esc(entry.name)}</b>
-      <small class="stock-sub">${esc(SC.manuName ? SC.manuName(entry.manu) : entry.manu)} · ${esc(klass)} · ${esc(entry.grade)} 级 · ${esc(shopName(entry.shop))}${esc(site)}</small>
+      <b class="stock-name">${esc(displayName)}</b>
+      <small class="stock-sub">${esc(SC.manuName ? SC.manuName(entry.manu) : entry.manu)}${classText}${gradeText} · ${esc(shopName(entry.shop))}</small>
       <div class="stock-specs">${componentSpecs(entry)}</div>
       ${warning}
       <div class="stock-price">${fmt(entry.price)}<small>aUEC</small></div>
@@ -1506,7 +1788,7 @@ function stockCard(entry, kind) {
       <div class="stock-card-media">${image}</div>
       <div class="stock-card-body">
         <b class="stock-name">${esc(ship.name)}</b>
-        <small class="stock-sub">${esc(ship.cn)} · ${esc(shopName(entry.shop))}</small>
+        <small class="stock-sub">${esc([ship.cn, shopName(entry.shop)].filter(Boolean).join(' · '))}</small>
         ${specs}
         <div class="stock-price">${fmt(entry.days[0])}<small>1日 / aUEC</small></div>
         <div class="stock-days">7日 ${fmt(entry.days[2])} · 30日 ${fmt(entry.days[3])}</div>
@@ -1584,9 +1866,10 @@ function renderStockTools(loc, tab) {
         ${typeCounts.map(([type, n]) => `<button type="button" class="${state.componentType === type ? 'active' : ''}" data-component-type="${esc(type)}">${esc(componentTypeLabel(type))} <small>${n}</small></button>`).join('')}
       </div>`
     : '';
-  const grades = tab === 'components' ? Array.from(new Set(uniqueBase.map((entry) => entry.grade).filter(Boolean))).sort() : [];
+  const typeBase = state.componentType === 'all' ? uniqueBase : uniqueBase.filter((entry) => entry.type === state.componentType);
+  const grades = tab === 'components' ? Array.from(new Set(typeBase.map((entry) => entry.grade).filter(Boolean))).sort() : [];
   const weaponMode = !!weaponComponentTypes[state.componentType];
-  const classes = tab === 'components' ? Array.from(new Set(uniqueBase.filter((entry) => !weaponComponentTypes[entry.type]).map((entry) => entry.itemClass || ''))).sort() : [];
+  const classes = tab === 'components' ? Array.from(new Set(typeBase.filter((entry) => !weaponComponentTypes[entry.type]).map((entry) => entry.itemClass || '').filter(Boolean))).sort() : [];
   const weaponKinds = weaponMode ? Array.from(new Set(uniqueBase.filter((entry) => entry.type === state.componentType).map(weaponComponentKind))).sort() : [];
   const shipRoles = (tab === 'ships' || tab === 'rent')
     ? Array.from(new Set(uniqueBase.map((entry) => { const ship = SC.shipById(entry.shipId); return ship && SC.primaryRole ? SC.primaryRole(ship) : null; }).filter(Boolean))).sort()
@@ -1604,23 +1887,32 @@ function renderStockTools(loc, tab) {
       </div>`
     : '';
   const gradeFilter = !weaponMode && grades.length > 1
-    ? `<div class="component-type-filter" role="group" aria-label="按等级筛选"><span class="filter-caption">等级</span>
+    ? `<div class="component-type-filter" role="group" aria-label="按等级筛选"><span class="filter-caption">品质等级</span>
         <button type="button" class="${state.componentGrade === 'all' ? 'active' : ''}" data-component-grade="all">全部</button>
         ${grades.map((grade) => `<button type="button" class="${state.componentGrade === grade ? 'active' : ''}" data-component-grade="${esc(grade)}">${esc(grade)} 级</button>`).join('')}
       </div>`
     : '';
   const classFilter = !weaponMode && classes.length > 1
-    ? `<div class="component-type-filter" role="group" aria-label="按级别筛选"><span class="filter-caption">级别</span>
+    ? `<div class="component-type-filter" role="group" aria-label="按级别筛选"><span class="filter-caption">用途级别</span>
         <button type="button" class="${state.componentClass === 'all' ? 'active' : ''}" data-component-class="all">全部</button>
         ${classes.map((value) => `<button type="button" class="${state.componentClass === value ? 'active' : ''}" data-component-class="${esc(value)}">${esc(componentClassLabel(value))}</button>`).join('')}
       </div>`
     : '';
-  host.innerHTML = `<div class="stock-summary"><span>共 <b>${scoped.length}</b> 条记录</span><span>价格区间 <b>${fmt(Math.min.apply(null, prices))}</b> – <b>${fmt(Math.max.apply(null, prices))}</b> aUEC</span></div>
+  const priceSummary = prices.length
+    ? `价格区间 <b>${fmt(Math.min.apply(null, prices))}</b> – <b>${fmt(Math.max.apply(null, prices))}</b> aUEC`
+    : '当前筛选无结果';
+  const uniqueCount = tab === 'components'
+    ? new Set(scoped.map((entry) => entry.componentId)).size
+    : scoped.length;
+  const countText = tab === 'components'
+    ? `共 <b>${scoped.length}</b> 条购买记录 · <b>${uniqueCount}</b> 种配件`
+    : `共 <b>${scoped.length}</b> 条记录`;
+  host.innerHTML = `<div class="stock-summary"><span>${countText}</span><span>${priceSummary}</span></div>
     ${shipRoleFilter}${typeFilter}${weaponFilter}${gradeFilter}${classFilter}
-    <div class="weapon-sizes" role="group" aria-label="按尺寸筛选">
+    ${sizes.length > 1 ? `<div class="weapon-sizes" role="group" aria-label="按尺寸筛选">
       <button type="button" class="${state.stockFilter === 'all' ? 'active' : ''}" data-stock-filter="all">全部 <small>${scoped.length}</small></button>
       ${sizes.map((size) => `<button type="button" class="${String(state.stockFilter) === String(size) ? 'active' : ''}" data-stock-filter="${esc(size)}">${esc(sizeLabel(size))}</button>`).join('')}
-    </div>`;
+    </div>` : ''}`;
 }
 
 function renderDialogStock(loc, tab) {
@@ -1720,6 +2012,7 @@ function renderDialog(loc) {
   const media = locationMedia(loc);
   const story = storyFor(loc);
   const storyText = story ? story.story : [SC.zhText(loc.desc)];
+  const storyLocalized = storyText.map((p) => SC.localizeShopText ? SC.localizeShopText(p) : p);
   const danger = riskLabel(loc.danger);
   const tabs = shop ? [
     ['ships', '飞船', shop.counts.buy],
@@ -1736,7 +2029,7 @@ function renderDialog(loc) {
       <div class="dialog-zh">${esc(loc.name)} · ${esc(parentLabel(loc))}</div>
     </header>
     <div class="dialog-body">
-      <div class="dialog-story">${storyText.map((p) => `<p>${esc(p)}</p>`).join('')}</div>
+      <div class="dialog-story">${storyLocalized.map((p) => `<p>${esc(p)}</p>`).join('')}</div>
       <aside class="dialog-side">
         <h4>地点信息</h4>
         <div class="dialog-facts">
@@ -1749,7 +2042,7 @@ function renderDialog(loc) {
       </aside>
     </div>
     <section class="dialog-stock">
-      <div class="dialog-stock-head"><h3>${shop ? '商店商品与租赁' : '地点档案'}</h3>
+      <div class="dialog-stock-head"><h3>${shop ? '商品与租赁' : '地点档案'}</h3>
         ${tabs.length ? `<div class="dialog-stock-tabs">${tabs.map(([key, label, n]) => `<button type="button" class="${state.tab === key ? 'active' : ''}" data-dialog-tab="${key}">${label} <small>${n}</small></button>`).join('')}</div>` : ''}
       </div>
       <div id="dialog-stock-tools"></div>
@@ -1901,7 +2194,11 @@ function init() {
     }
     setTimeout(() => {
       const target = els.grid && els.grid.querySelector(`[data-loc="${loc.id}"]`);
-      if (!target) return;
+      if (!target) {
+        /* Hidden rest stops have no card; still open their shop drawer. */
+        if (typeof SC.openLocation === 'function') SC.openLocation(loc.id, false);
+        return;
+      }
       target.classList.add('is-target');
       target.scrollIntoView({ behavior: 'smooth', block: 'center' });
       setTimeout(() => target.classList.remove('is-target'), 4500);

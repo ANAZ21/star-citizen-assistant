@@ -3,7 +3,7 @@
    ---------------------------------------------------------
    购买/租赁/武器库存来自 CStone Universal Item Finder（社区
    众包数据，页面核验日期为 2955–2956 游戏年）。仅保留本站
-   已有地点的条目；Levski/Nyx 未纳入。价格为 aUEC。
+   已有地点的条目；Levski/Nyx 由 data-shops-levski.js 补充。价格为 aUEC。
    ========================================================= */
 
 window.SC_SHOPS = {
@@ -14,7 +14,7 @@ window.SC_SHOPS = {
   "includes": [
    "RSI Aurora Mk II",
    "游戏资格",
-   "30 天租借：Drake Golem / MISC Fortune / Crusader Intrepid"
+   "30 天租赁：Drake Golem / MISC Fortune / Crusader Intrepid"
   ],
   "source": "https://robertsspaceindustries.com/en/pledge/Packages/Star-Citizen-First-Flight-Pack",
   "image": "assets/img/packages/first-flight.webp"

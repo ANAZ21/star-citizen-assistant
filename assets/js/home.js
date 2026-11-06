@@ -7,7 +7,18 @@
 
   if (document.body.getAttribute('data-page') !== 'home') return;
 
-  var HERO_SHIPS = ['carrack', 'polaris', '890-jump'];
+  var HERO_SLIDES = [
+    { type: 'ship', id: 'carrack' },
+    { type: 'scene', loc: 'aberdeen', src: 'assets/img/scenery/aberdeen-sunset.webp' },
+    { type: 'ship', id: 'polaris' },
+    { type: 'scene', loc: 'microtech', src: 'assets/img/scenery/microtech-mountains.webp' },
+    { type: 'ship', id: '890-jump' },
+    { type: 'scene', loc: 'daymar', src: 'assets/img/scenery/daymar-javelin.webp' },
+    { type: 'ship', id: 'constellation-phoenix' },
+    { type: 'scene', loc: 'ita', src: 'assets/img/scenery/hurston-ita-valley.webp' },
+    { type: 'ship', id: 'f8c-lightning' },
+    { type: 'scene', loc: 'wala', src: 'assets/img/scenery/arccorp-wala.webp' }
+  ];
   var FEATURED = [
     'cutlass-black', 'gladius', 'andromeda', 'polaris',
     'carrack', 'constellation-phoenix', 'guardian', 'asgard',
@@ -30,7 +41,6 @@
   };
   var heroTimer = null;
   var heroLayers = [];
-  var heroVisible = 0;
 
   function init() {
     var homeShipCount = document.getElementById('hero-ship-count-home');
@@ -48,15 +58,42 @@
   }
 
   /* ---------- Hero ---------- */
+  function heroSlideTitle(slide) {
+    if (slide.type === 'ship') {
+      var ship = SC.shipById(slide.id);
+      return ship ? ship.name : '';
+    }
+    var loc = SC.locationById(slide.loc);
+    return loc ? SC.zhName(loc) : '';
+  }
+
+  function heroSrc(slide) {
+    if (slide.type === 'scene') return slide.src;
+    var media = SC.shipMedia(slide.id) || {};
+    return media.hero || media.card || '';
+  }
+
   function initHero() {
-    var a = document.getElementById('hero-img-a');
-    var b = document.getElementById('hero-img-b');
-    if (!a || !b) return;
-    heroLayers = [a, b];
+    var media = document.querySelector('.cinema-media');
+    if (!media) return;
+    Array.prototype.forEach.call(media.querySelectorAll('.hero-layer'), function (img) { img.remove(); });
+    HERO_SLIDES.forEach(function (slide, i) {
+      var img = document.createElement('img');
+      img.className = 'hero-layer' + (i === 0 ? ' active' : '');
+      img.src = heroSrc(slide);
+      img.alt = heroSlideTitle(slide) + (slide.type === 'ship' ? ' 飞船外观' : ' 行星地表');
+      img.decoding = 'async';
+      img.width = slide.type === 'scene' ? 2560 : 1600;
+      img.height = slide.type === 'scene' ? 1440 : 900;
+      if (i === 0) img.setAttribute('fetchpriority', 'high');
+      media.insertBefore(img, media.firstChild);
+    });
+    heroLayers = Array.prototype.slice.call(media.querySelectorAll('.hero-layer'));
+    heroLayers.reverse();
+
     var dots = document.getElementById('hero-dots');
-    dots.innerHTML = HERO_SHIPS.map(function (id, i) {
-      var s = SC.shipById(id);
-      return '<button class="cinema-dot' + (i === 0 ? ' active' : '') + '" type="button" data-hero="' + i + '" aria-label="' + SC.escapeHtml(s.name) + '"></button>';
+    dots.innerHTML = HERO_SLIDES.map(function (slide, i) {
+      return '<button class="cinema-dot' + (i === 0 ? ' active' : '') + '" type="button" data-hero="' + i + '" aria-label="' + SC.escapeHtml(heroSlideTitle(slide)) + '"></button>';
     }).join('');
     dots.addEventListener('click', function (e) {
       var btn = e.target.closest('[data-hero]');
@@ -64,51 +101,56 @@
     });
 
     var hero = document.getElementById('cinema-hero');
-    hero.addEventListener('mouseenter', pauseHero);
-    hero.addEventListener('mouseleave', resumeHero);
     hero.addEventListener('mousemove', function (e) {
       var r = hero.getBoundingClientRect();
       var x = (e.clientX - r.left) / r.width - 0.5;
       var y = (e.clientY - r.top) / r.height - 0.5;
-      hero.style.setProperty('--px', (x * 12).toFixed(2));
-      hero.style.setProperty('--py', (y * 8).toFixed(2));
+      hero.style.setProperty('--px', (x * 38).toFixed(2));
+      hero.style.setProperty('--py', (y * 26).toFixed(2));
+    });
+    hero.addEventListener('mouseleave', function () {
+      hero.style.setProperty('--px', '0');
+      hero.style.setProperty('--py', '0');
     });
 
     updateHeroText(0);
-    pauseHero();
     resumeHero();
   }
 
   function switchHero(index, manual) {
-    if (index === currentHero) return;
+    if (index === currentHero || !heroLayers[index]) return;
+    heroLayers[currentHero].classList.remove('active');
+    heroLayers[index].classList.add('active');
     currentHero = index;
-    var s = SC.shipById(HERO_SHIPS[index]);
-    var media = SC.shipMedia(s.id) || {};
-    var nextLayer = heroLayers[1 - heroVisible];
-    var src = media.hero || media.card;
-    if (src) {
-      nextLayer.onload = function () {
-        nextLayer.classList.add('active');
-        heroLayers[heroVisible].classList.remove('active');
-        heroVisible = 1 - heroVisible;
-        nextLayer.onload = null;
-      };
-      nextLayer.src = src;
-      nextLayer.alt = s.name + ' 飞船外观';
-      if (nextLayer.complete) nextLayer.onload();
-    }
     updateHeroText(index);
-    if (manual) { pauseHero(); resumeHero(); }
+    if (manual) resumeHero();
   }
 
   function updateHeroText(index) {
-    var s = SC.shipById(HERO_SHIPS[index]);
+    var slide = HERO_SLIDES[index];
+    var label = document.getElementById('hero-slide-label');
     var role = document.getElementById('hero-ship-role');
     var price = document.getElementById('hero-ship-price');
     var link = document.getElementById('hero-ship-link');
-    if (link) { link.textContent = s.name; link.href = 'ships.html?ship=' + s.id; }
-    if (role) role.textContent = s.cn || s.role;
-    if (price) price.textContent = s.usd != null ? '$' + s.usd : s.role;
+    var card = document.querySelector('.cinema-ship-card');
+    if (slide.type === 'ship') {
+      var ship = SC.shipById(slide.id);
+      if (!ship) return;
+      if (label) label.textContent = '精选飞船';
+      if (link) { link.textContent = ship.name; link.href = 'ships.html?ship=' + ship.id; }
+      if (role) role.textContent = ship.cn || ship.role;
+      if (price) price.textContent = ship.usd != null ? SC.fmtUSD(ship.usd) : '详情';
+      if (card) card.classList.remove('is-scene');
+    } else {
+      var loc = SC.locationById(slide.loc);
+      var system = loc && SC.systemById(loc.system);
+      if (!loc) return;
+      if (label) label.textContent = '行星地表';
+      if (link) { link.textContent = SC.zhName(loc); link.href = 'systems.html?loc=' + loc.id; }
+      if (role) role.textContent = SC.typeLabels[loc.type];
+      if (price) price.textContent = system ? system.name : '';
+      if (card) card.classList.add('is-scene');
+    }
     Array.prototype.forEach.call(document.querySelectorAll('.cinema-dot'), function (d, i) {
       d.classList.toggle('active', i === index);
     });
@@ -122,8 +164,8 @@
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     pauseHero();
     heroTimer = setInterval(function () {
-      switchHero((currentHero + 1) % HERO_SHIPS.length, false);
-    }, 8000);
+      switchHero((currentHero + 1) % HERO_SLIDES.length, false);
+    }, 7000);
   }
 
   /* ---------- 统计 ---------- */
@@ -220,7 +262,9 @@
       var d = locs[id];
       var l = SC.locationById(id);
       if (!d || !l) return '';
-      var allShops = d.shops || [];
+      var allShops = (d.shops || []).map(function (name) {
+        return SC.shopName ? SC.shopName(name) : name;
+      }).filter(function (name, index, list) { return list.indexOf(name) === index; });
       var names = allShops.slice(0, 3).join(' · ') + (allShops.length > 3 ? ' +' + (allShops.length - 3) : '');
       var media = SHOP_MEDIA[id];
       var mediaUrl = media ? new URL(media, window.location.href).href : '';
@@ -261,7 +305,7 @@
     var host = document.getElementById('home-systems');
     if (!host) return;
     host.innerHTML = SC.systems.map(function (system, idx) {
-      var locs = SC.locationsBySystem(system.id);
+      var locs = SC.locationsBySystem(system.id).filter(function (l) { return !(SC.isHiddenLocation && SC.isHiddenLocation(l.id)); });
       var art = 'assets/img/systems/' + system.id + '-card.webp';
       var planets = locs.filter(function (l) { return l.type === 'planet'; }).length;
       var stations = locs.filter(function (l) { return l.type === 'station'; }).length;
@@ -270,7 +314,7 @@
       if (stations) tags.push(stations + ' 空间站');
       tags.push(jurisdiction);
       return '<a class="system-card reveal" href="systems.html?system=' + system.id + '" style="--i:' + idx + '">' +
-        '<div class="system-card-map"><img src="' + art + '" width="1600" height="900" alt="' + SC.escapeHtml(system.name) + ' 星系图" loading="lazy" decoding="async"></div>' +
+        '<div class="system-card-map"><img src="' + art + '" width="1600" height="1120" alt="' + SC.escapeHtml(system.name) + ' 星系图" loading="lazy" decoding="async"></div>' +
         '<div class="system-card-body">' +
           '<h3>' + SC.escapeHtml(system.name) + '<small>' + SC.escapeHtml(system.en) + '</small></h3>' +
           '<p>' + SC.escapeHtml((window.SC_SYSTEM_COPY && SC_SYSTEM_COPY[system.id]) || system.desc) + '</p>' +

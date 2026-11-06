@@ -370,7 +370,8 @@ body[data-page="systems"] .app-main { padding-bottom: 0; }
 .dialog-stock-empty { grid-column: 1/-1; padding: 26px 0; color: var(--label-secondary); font-size: 13px; text-align: center; }
 .dialog-note { margin-top: 12px; color: var(--label-tertiary); font-family: var(--font-mono); font-size: 7px; letter-spacing: .04em; }
 
-body.atlas-fullscreen { overflow: hidden; }
+body.atlas-fullscreen, body.atlas-expanding { overflow: hidden; }
+body.atlas-expanding .app-main, body.atlas-fullscreen .app-main { animation: none; transform: none; }
 body.atlas-fullscreen .app-main { animation: none; transform: none; }
 .atlas-stage.is-fullscreen {
   position: fixed; inset: 0; z-index: 9999;
@@ -555,34 +556,63 @@ body.drawer-open .atlas-focus { display: none; }
 
 .filter-caption { flex-shrink: 0; padding: 0 4px 0 2px; color: var(--label-tertiary); font-size: 10px; line-height: 28px; }
 
-/* fullscreen transition */
-.atlas-stage.is-fullscreen { animation: atlas-full-enter .72s cubic-bezier(.22,1,.36,1) both; }
-@keyframes atlas-full-enter {
-  from { opacity: 1; transform: scale(.96); filter: blur(1px); }
-  to { opacity: 1; transform: none; filter: none; }
+/* native card-to-fullscreen expansion */
+.atlas-stage.is-expanding {
+  position: fixed;
+  z-index: 9999;
+  margin: 0;
+  border: 0;
+  box-shadow: 0 34px 120px rgba(0, 0, 0, .55);
+  transition: transform .62s cubic-bezier(.22, 1, .36, 1);
+  will-change: transform;
+  backface-visibility: hidden;
 }
-.atlas-stage.is-fullscreen::before {
-  content: "";
-  position: absolute;
-  z-index: 20;
+.atlas-expand-backdrop {
+  position: fixed;
   inset: 0;
+  z-index: 9998;
+  opacity: 0;
   pointer-events: none;
-  background: radial-gradient(circle at 50% 50%, rgba(100,210,255,.18), transparent 48%);
-  animation: atlas-warp .9s ease-out both;
+  background: rgba(2, 5, 8, .68);
+  transition: opacity .5s ease;
 }
-@keyframes atlas-warp {
-  0% { opacity: 0; transform: scale(.6); }
-  35% { opacity: 1; }
-  100% { opacity: 0; transform: scale(1.5); }
-}
+.atlas-expand-backdrop.show { opacity: 1; }
 .atlas-node.planet .atlas-node-label { border-left: 0; padding-left: 0; }
 
 .component-group-title { grid-column: 1 / -1; display: flex; align-items: baseline; gap: 8px; margin-top: 6px; padding: 4px 2px 2px; border-bottom: 1px solid rgba(255,255,255,.08); }
 .component-group-title span { color: var(--label); font-size: 15px; font-weight: 600; }
 .component-group-title small { color: var(--label-tertiary); font-family: var(--font-num); font-size: 12px; }
 
-.atlas-warp-flash { position: absolute; z-index: 30; inset: 0; pointer-events: none; background: radial-gradient(circle at 50% 52%, rgba(190,230,255,.2), rgba(3,6,10,.9) 58%); animation: atlas-warp-flash .95s cubic-bezier(.22,1,.36,1) both; }
-@keyframes atlas-warp-flash { 0% { opacity: 0; transform: scale(1.06); } 32% { opacity: 1; } 100% { opacity: 0; transform: scale(1); } }
-
 body.atlas-fullscreen .atlas-head,
 body.atlas-fullscreen .locations-section { visibility: hidden; }
+
+/* station beacons need to read at system-overview scale */
+.atlas-node.kind-station .atlas-node-dot {
+  width: 27px; height: 27px;
+  border-color: rgba(120, 218, 255, .65);
+  background: rgba(5, 16, 23, .76);
+  color: #bdefff;
+  box-shadow: 0 0 14px rgba(80, 190, 230, .18);
+}
+.atlas-node.kind-station .atlas-node-dot svg { width: 15px; height: 15px; }
+.atlas-node.kind-station .atlas-node-label b { font-size: 14px; color: #d6f7ff; }
+.atlas-node.kind-station .atlas-node-label small { font-size: 8px; color: #9ab4c1; }
+.atlas-node.kind-station.shop .atlas-node-dot { border-color: rgba(255, 159, 10, .75); color: #ffd08a; }
+.atlas-node.kind-station.shop .atlas-node-label b { color: #ffbf75; }
+
+/* readable atlas labels: dark backing so text stays legible over the star and planets */
+.atlas-node-label {
+  padding: 3px 7px;
+  border-radius: 4px;
+  background: rgba(4, 9, 13, .66);
+  backdrop-filter: blur(4px);
+}
+.atlas-node.label-left .atlas-node-label { padding: 3px 7px; }
+.atlas-node.label-up .atlas-node-label { padding: 3px 7px 5px; }
+.atlas-node-label b { font-size: 15px; }
+.atlas-node-label small { font-size: 10px; }
+.atlas-node.kind-station .atlas-node-label small { font-size: 10px; }
+.atlas-node.offscreen { opacity: 0 !important; pointer-events: none; }
+.atlas-fallback { position: absolute; inset: 0; z-index: 10; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 30px; text-align: center; background: rgba(3,6,10,.92); color: #cfe3ee; }
+.atlas-fallback b { font-size: 20px; color: #fff; }
+.atlas-fallback span { max-width: 520px; font-size: 13px; line-height: 1.8; color: #93a8b5; }

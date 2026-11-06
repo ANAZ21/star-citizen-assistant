@@ -29,7 +29,7 @@
     return (meta.types[type] && meta.types[type].label) || type;
   };
   var classLabel = function (value) {
-    return (meta.classes[value] || value || '未分类');
+    return value ? (meta.classes[value] || value) : '';
   };
   var manuLabel = function (value) {
     return (meta.manufacturers[value] || SC.manuName(value) || value || '—');
@@ -42,6 +42,64 @@
   var locationName = function (id) {
     var loc = id && SC.locationById ? SC.locationById(id) : null;
     return loc ? (SC.zhName(loc) || loc.name) : '';
+  };
+  var placeAliases = {
+    'platinumbay': '白金湾',
+    "dumper'sdepot": '倾卸者仓库',
+    'dumperdepot': '倾卸者仓库',
+    'centermass': '核心区域',
+    'buyandfly': '购船中心',
+    'newdeal': '全新交易',
+    'astroarmada': '天文舰队',
+    'crusadershowroom': '十字军展厅',
+    'shipparts': '飞船配件',
+    'shipweapons': '飞船武器',
+    'vantagerentals': '优越租赁',
+    'travelerentals': '旅行者租赁',
+    "teach'sshipshop": '蒂奇的飞船店',
+    "teach'sitemshop": '蒂奇的物品店',
+    'everusharbor': '埃弗勒斯港',
+    'pyrogateway(nyx)': '派罗星门（尼克斯侧）',
+    'stantongateway(nyx)': '斯坦顿星门（尼克斯侧）',
+    'stantongateway(pyro)': '斯坦顿星门（派罗侧）',
+    'nyxgateway(pyro)': '尼克斯星门（派罗侧）',
+    'terragateway(stanton)': '泰拉星门（斯坦顿侧）',
+    'pyrogateway(stanton)': '派罗星门（斯坦顿侧）'
+  };
+  var placeKey = function (value) {
+    return String(value || '').toLowerCase().replace(/[\s·_\-()（）]+/g, '');
+  };
+  var translatedPlacePart = function (value) {
+    var part = String(value || '').trim();
+    if (!part) return '';
+    var alias = placeAliases[placeKey(part)];
+    if (alias) return alias;
+    var normalized = part.toLowerCase();
+    var loc = (SC.locations || []).filter(function (entry) {
+      return String(entry.name || '').toLowerCase() === normalized;
+    })[0];
+    if (loc) return SC.zhName(loc) || loc.cn || loc.name;
+    var shop = shopName(part);
+    if (shop && shop !== part) return shop;
+    return part;
+  };
+  var PYR_NUMBER = {
+    'pyro i': 'pyro-i', 'pyro ii': 'monox', 'pyro iii': 'bloom',
+    'pyro iv': 'fairo', 'pyro v': 'fuego', 'pyro vi': 'terminus'
+  };
+  var localizedPlace = function (shop) {
+    var loc = shop.locId ? locationName(shop.locId) : '';
+    if (!loc) loc = shop.loc || '';
+    loc = loc || translatedPlacePart(shop.loc) || '未知地点';
+    if (shop.locId === 'pyro-outposts' && shop.site) {
+      var parts = String(shop.site).split(' · ').filter(Boolean);
+      if (parts.length) {
+        var numbered = PYR_NUMBER[parts[0].toLowerCase()];
+        parts[0] = numbered ? locationName(numbered) : (SC.zhParent(parts[0]) || parts[0]);
+        loc += ' · ' + parts.join(' · ');
+      }
+    }
+    return loc;
   };
   var displayName = function (item) {
     if (item.type === 'weapon' && SC.weaponName) return SC.weaponName(item.en || item.name);
@@ -133,10 +191,9 @@
     var shops = sortedShops(item);
     var shown = shops.slice(0, limit);
     var html = shown.map(function (shop) {
-      var loc = shop.loc || locationName(shop.locId) || '未知地点';
-      var site = shop.site ? ' · ' + shop.site : '';
+      var place = localizedPlace(shop);
       var body =
-        '<span class="component-shop-place"><b>' + esc(loc) + esc(site) + '</b><small>' + esc(shopName(shop.shop)) + '</small></span>' +
+        '<span class="component-shop-place"><b>' + esc(place) + '</b><small>' + esc(translatedPlacePart(shop.shop)) + '</small></span>' +
         '<span class="component-shop-price"><b>' + fmt(shop.price, 0) + '</b><small>aUEC</small></span>';
       if (shop.locId && !isAggregate(shop)) {
         return '<a class="component-shop-row" href="systems.html?loc=' + encodeURIComponent(shop.locId) + '">' + body + '</a>';
@@ -162,7 +219,7 @@
     return '<article class="component-card reveal' + (shops.length ? '' : ' unsold') + '" data-component="' + esc(item.id) + '" tabindex="0" style="--i:' + (index % 6) + '">' +
       '<div class="component-card-head"><span class="component-type">' + esc(typeLabel(item.type)) + '</span><span class="component-size">S' + esc(item.size == null ? '—' : item.size) + '</span></div>' +
       '<h3 class="component-name">' + esc(name) + en + '</h3>' +
-      '<p class="component-maker">' + esc(manuLabel(item.manu)) + ' · ' + esc(itemClass(item)) + (item.grade ? ' · ' + esc(item.grade) + ' 级' : '') + '</p>' +
+      '<p class="component-maker">' + esc(manuLabel(item.manu)) + (itemClass(item) ? ' · ' + esc(itemClass(item)) : '') + (item.grade ? ' · ' + esc(item.grade) + ' 级' : '') + '</p>' +
       statsMarkup(item) + acquire + shopsBlock +
       '<div class="component-card-foot">' + foot + '</div>' +
     '</article>';
@@ -233,22 +290,30 @@
     }).join('');
   }
 
+  function sourceItems() {
+    return state.type === 'all' ? items : items.filter(function (item) { return item.type === state.type; });
+  }
+
   function renderSizes() {
     if (!els.size) return;
-    var sizes = Array.from(new Set(items.map(function (item) { return item.size; }).filter(function (size) { return size != null; }))).sort(function (a, b) { return a - b; });
+    var source = sourceItems();
+    var sizes = Array.from(new Set(source.map(function (item) { return item.size; }).filter(function (size) { return size != null; }))).sort(function (a, b) { return a - b; });
     els.size.innerHTML = '<option value="all">全部尺寸</option>' + sizes.map(function (size) {
       return '<option value="' + size + '">S' + size + '</option>';
     }).join('');
+    if (sizes.map(String).indexOf(String(state.size)) === -1) state.size = 'all';
     els.size.value = state.size;
-    var grades = Array.from(new Set(items.map(function (item) { return item.grade; }).filter(Boolean))).sort();
-    els.grade.innerHTML = '<option value="all">全部等级</option>' + grades.map(function (grade) {
+    var grades = Array.from(new Set(source.map(function (item) { return item.grade; }).filter(Boolean))).sort();
+    els.grade.innerHTML = '<option value="all">全部品质等级</option>' + grades.map(function (grade) {
       return '<option value="' + esc(grade) + '">' + esc(grade) + ' 级</option>';
     }).join('');
+    if (grades.indexOf(state.grade) === -1) state.grade = 'all';
     els.grade.value = state.grade;
-    var classes = Array.from(new Set(items.filter(function (item) { return !weaponTypes[item.type]; }).map(function (item) { return item.itemClass || ''; }))).sort();
-    els.itemClass.innerHTML = '<option value="all">全部级别</option>' + classes.map(function (value) {
+    var classes = Array.from(new Set(source.filter(function (item) { return !weaponTypes[item.type]; }).map(function (item) { return item.itemClass || ''; }).filter(Boolean))).sort();
+    els.itemClass.innerHTML = '<option value="all">全部用途级别</option>' + classes.map(function (value) {
       return '<option value="' + esc(value) + '">' + esc(classLabel(value)) + '</option>';
     }).join('');
+    if (classes.indexOf(state.itemClass) === -1) state.itemClass = 'all';
     els.itemClass.value = state.itemClass;
     if (els.weaponType) {
       var weaponSource = weaponTypes[state.type] ? items.filter(function (item) { return item.type === state.type; }) : items.filter(function (item) { return weaponTypes[item.type]; });
@@ -256,21 +321,37 @@
       els.weaponType.innerHTML = '<option value="all">全部武器类型</option>' + kinds.map(function (kind) {
         return '<option value="' + esc(kind) + '">' + esc(kind) + '</option>';
       }).join('');
+      if (kinds.indexOf(state.weaponKind) === -1) state.weaponKind = 'all';
       els.weaponType.value = state.weaponKind;
     }
   }
 
   function syncFilterVisibility() {
     var isWeapon = !!weaponTypes[state.type];
-    [els.grade, els.itemClass, els.sale].forEach(function (select) {
+    var source = sourceItems();
+    var sizes = new Set(source.map(function (item) { return item.size; }).filter(function (size) { return size != null; }));
+    var grades = new Set(source.map(function (item) { return item.grade; }).filter(Boolean));
+    var classes = new Set(source.filter(function (item) { return !weaponTypes[item.type]; }).map(function (item) { return item.itemClass || ''; }).filter(Boolean));
+    var soldCount = source.filter(function (item) { return (item.shops || []).length; }).length;
+    var hasSaleMix = soldCount > 0 && soldCount < source.length;
+    var weaponKinds = new Set(items.filter(function (item) { return isWeapon ? item.type === state.type : weaponTypes[item.type]; }).map(weaponKind));
+    var visible = {
+      size: sizes.size > 1,
+      grade: !isWeapon && grades.size > 1,
+      itemClass: !isWeapon && classes.size > 1,
+      sale: !isWeapon && hasSaleMix,
+      weaponType: isWeapon && weaponKinds.size > 1
+    };
+    if (!visible.sale && state.sale !== 'all') {
+      state.sale = 'all';
+      if (els.sale) els.sale.value = 'all';
+    }
+    [['size', els.size], ['grade', els.grade], ['itemClass', els.itemClass], ['sale', els.sale], ['weaponType', els.weaponType]].forEach(function (pair) {
+      var select = pair[1];
       if (!select) return;
       var wrap = select.closest('.sc-select');
-      if (wrap) wrap.hidden = isWeapon;
+      if (wrap) wrap.hidden = !visible[pair[0]];
     });
-    if (els.weaponType) {
-      var wrap = els.weaponType.closest('.sc-select');
-      if (wrap) wrap.hidden = !isWeapon;
-    }
   }
 
   function pagerMarkup(pages) {
@@ -348,10 +429,9 @@
     if (!item) return;
     var shops = sortedShops(item);
     var allShops = shops.map(function (shop) {
-      var loc = shop.loc || locationName(shop.locId) || '未知地点';
-      var site = shop.site ? ' · ' + shop.site : '';
+      var place = localizedPlace(shop);
       var body =
-        '<span class="component-shop-place"><b>' + esc(loc) + esc(site) + '</b><small>' + esc(shopName(shop.shop)) + '</small></span>' +
+        '<span class="component-shop-place"><b>' + esc(place) + '</b><small>' + esc(translatedPlacePart(shop.shop)) + '</small></span>' +
         '<span class="component-shop-price"><b>' + fmt(shop.price, 0) + '</b><small>aUEC</small></span>';
       if (shop.locId && !isAggregate(shop)) {
         return '<a class="component-shop-row" href="systems.html?loc=' + encodeURIComponent(shop.locId) + '">' + body + '</a>';
@@ -377,6 +457,7 @@
     els.inner.querySelector('[data-component-close]').addEventListener('click', closeDetail);
     if (!els.dialog.open) {
       els.dialog.showModal();
+      els.inner.scrollTop = 0;
       document.body.classList.add('modal-open');
     }
   }
@@ -397,6 +478,20 @@
     });
     var groups = hosts.map(function (host) { return Array.prototype.slice.call(host.querySelectorAll('img')); });
     var max = Math.max.apply(null, groups.map(function (imgs) { return imgs.length; }));
+    var hero = document.querySelector('.components-hero');
+    if (hero) {
+      hero.addEventListener('mousemove', function (event) {
+        var r = hero.getBoundingClientRect();
+        var x = (event.clientX - r.left) / r.width - 0.5;
+        var y = (event.clientY - r.top) / r.height - 0.5;
+        hero.style.setProperty('--px', (x * 30).toFixed(2));
+        hero.style.setProperty('--py', (y * 20).toFixed(2));
+      });
+      hero.addEventListener('mouseleave', function () {
+        hero.style.setProperty('--px', '0');
+        hero.style.setProperty('--py', '0');
+      });
+    }
     if (max < 2 || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     var index = 0;
     setInterval(function () {

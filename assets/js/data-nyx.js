@@ -15,7 +15,7 @@ SC.systems.push({
   security: '无 · 无法地带',
   planets: 1,
   moons: 0,
-  desc: '尼克斯是斯坦顿与派罗之外的边境星系，长期处于 UEE 管辖之外。戴拉玛与列夫斯基是主要活动区域，冰川环带和基格带提供采矿与打捞机会。',
+  desc: '尼克斯是斯坦顿与派罗之外的边境星系，长期处于 UEE 管辖之外。德拉玛与列夫斯基是主要活动区域，冰川环带和基格带提供采矿与打捞机会。',
   orbits: [120],
   starPos: { x: 600, y: 350 },
   mapNote: 'NYX // DELAMAR',
@@ -75,8 +75,8 @@ SC.locations.push(
     cn: '尼克斯 - 派罗跳跃点',
     type: 'jump',
     parent: 'Nyx',
-    mapX: 730,
-    mapY: 455,
+    mapX: 700,
+    mapY: 493,
     danger: 4,
     services: [],
     desc: '尼克斯连接派罗星系的跳跃点，是边境航线的重要节点。',
@@ -125,7 +125,7 @@ if (window.SC_I18N && SC_I18N.locations) {
 }
 
 if (window.SC_SYSTEM_COPY) {
-  SC_SYSTEM_COPY.nyx = '斯坦顿与派罗之外的边境星系，长期处于 UEE 管辖之外。戴拉玛与列夫斯基是主要活动区域。';
+  SC_SYSTEM_COPY.nyx = '斯坦顿与派罗之外的边境星系，长期处于 UEE 管辖之外。德拉玛与列夫斯基是主要活动区域。';
 }
 
 if (window.SC_STORIES) {

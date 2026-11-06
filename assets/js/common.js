@@ -1,15 +1,39 @@
 /* =========================================================
-   MOBIGLAS · 公共脚本（iOS 深色界面版）
+   公民导航 · 公共脚本（iOS 深色界面版）
    ========================================================= */
 
 (function () {
   'use strict';
 
   window.SC = window.SC || {};
-  SC.hiddenLocations = ['ghost-hollow', 'jumptown'];
+
+  /* 基础名单 + 补充名单（wiki 全量 + ATLS）合并，按 id 去重 */
+  (function mergeShipRosters() {
+    var seen = {};
+    (SC.ships || []).forEach(function (ship) { if (ship && ship.id) seen[ship.id] = true; });
+    ['SC_SHIPS_EXTRA', 'SC_SHIPS_ATLS'].forEach(function (key) {
+      var rows = window[key];
+      if (!Array.isArray(rows)) return;
+      rows.forEach(function (ship) {
+        if (!ship || !ship.id || seen[ship.id]) return;
+        seen[ship.id] = true;
+        SC.ships.push(ship);
+      });
+    });
+  })();
+
+  (function applyShipChineseNames() {
+    var extra = window.SC_SHIP_CN_EXTRA || {};
+    (SC.ships || []).forEach(function (ship) {
+      if (extra[ship.id] && (!ship.cn || ship.cn === ship.name)) ship.cn = extra[ship.id];
+    });
+  })();
+
+  SC.hiddenLocations = ['ghost-hollow', 'jumptown', 'lagrange'];
   SC.isHiddenLocation = function (id) {
     if ((SC.hiddenLocations || []).indexOf(id) !== -1) return true;
     var loc = (SC.locations || []).filter(function (item) { return item.id === id; })[0];
+    if (loc && loc.type === 'station' && /-l\d$/i.test(id)) return true;
     return !!(loc && loc.type === 'poi');
   };
   SC.visibleLocations = function () { return (SC.locations || []).filter(function (loc) { return !SC.isHiddenLocation(loc.id); }); };
@@ -72,6 +96,27 @@
   SC.shopName = function (name) {
     var map = (window.SC_I18N && SC_I18N.shops) || {};
     return map[normalizeKey(name)] || name || '';
+  };
+
+  var SHOP_TEXT = [
+    ['Astro Armada', '天文舰队'],
+    ['Riker Memorial Spaceport', '瑞克纪念太空港'],
+    ['Crusader Showroom', '十字军展厅'],
+    ["Dumper's Depot", '倾卸者仓库'],
+    ['New Deal', '全新交易'],
+    ["Teach's Ship Shop", '蒂奇的飞船店'],
+    ['Platinum Bay', '白金湾'],
+    ['Omega Pro', '欧米伽Pro'],
+    ["Cousin Crow's", '乌鸦表哥'],
+    ['Centermass', '核心区域'],
+    ['CenterMass', '核心区域']
+  ];
+  SC.localizeShopText = function (text) {
+    var out = String(text || '');
+    SHOP_TEXT.forEach(function (pair) {
+      out = out.split(pair[0]).join(pair[1]);
+    });
+    return out;
   };
 
   var weaponLookup = null;
@@ -305,8 +350,8 @@
     host.className = 'ios-nav';
     host.innerHTML =
       '<div class="ios-nav-inner">' +
-        '<a class="ios-brand" href="index.html" aria-label="MOBIGLAS 星际公民助手首页">' +
-          brandMark() + '<span class="ios-brand-name">MOBIGLAS</span>' +
+        '<a class="ios-brand" href="index.html" aria-label="公民导航 星际公民非官方资料站首页">' +
+          brandMark() + '<span class="ios-brand-name">公民导航</span>' +
         '</a>' +
         '<nav class="ios-nav-links" aria-label="主导航">' + nav + '</nav>' +
         '<div class="ios-nav-title" id="nav-title">' + (PAGE_TITLES[page] || '') + '</div>' +
@@ -326,7 +371,7 @@
     host.innerHTML =
       '<div class="ios-footer-inner">' +
         '<div class="ios-footer-brand">' +
-          '<a class="ios-brand" href="index.html">' + brandMark() + '<span class="ios-brand-name">MOBIGLAS</span></a>' +
+          '<a class="ios-brand" href="index.html">' + brandMark() + '<span class="ios-brand-name">公民导航</span></a>' +
           '<p>飞船价格、性能参数、星系航图与地点设施资料。非官方粉丝站点，与 Cloud Imperium Games 无隶属或合作关系。</p>' +
         '</div>' +
         '<div class="ios-footer-col">' +
@@ -345,12 +390,20 @@
         '</div>' +
       '</div>' +
       '<div class="ios-footer-bottom">' +
-        '<span>© 2026 MOBIGLAS · 玩家制作的资料站</span>' +
+        '<span>© 2026 公民导航 CITIZEN NAV · 非官方玩家资料站</span>' +
       '</div>';
   }
 
+  /* 桌面端提示：不做移动版，只在窄屏说明 */
+  if (window.matchMedia && window.matchMedia('(max-width: 900px)').matches) {
+    var notice = document.createElement('div');
+    notice.className = 'desktop-notice';
+    notice.textContent = '本站按桌面端设计，请使用电脑浏览器访问以获得完整星图与数据表。';
+    document.body.appendChild(notice);
+  }
+
   /* ---------- 搜索 ---------- */
-  var searchState = { index: 0, items: [] };
+  var searchState = { index: 0, items: [], lastFocus: null };
 
   function buildSearch() {
     if (SC.$('#search-overlay')) return;
@@ -392,11 +445,16 @@
         return hay.indexOf(q) !== -1;
       }).slice(0, q ? 7 : 4);
 
+      var seenComponents = {};
       var comps = (window.SC_COMPONENT_SEARCH || []).filter(function (c) {
         if (!q) return false;
         var label = c.type === 'weapon' && SC.weaponName ? SC.weaponName(c.en) : c.name;
         var hay = [c.name, c.en, c.manu, SC.manuName(c.manu), c.typeLabel, c.grade, c.itemClass, c.acquisition, c.sold === false ? '商店无售' : '商店有售', label].join(' ').toLowerCase();
-        return hay.indexOf(q) !== -1;
+        if (hay.indexOf(q) === -1) return false;
+        var key = [c.type, c.name, c.en, c.size, c.grade, c.manu].join('|');
+        if (seenComponents[key]) return false;
+        seenComponents[key] = 1;
+        return true;
       }).slice(0, 6);
 
       var html = '';
@@ -471,6 +529,7 @@
     }
 
     function openSearch() {
+      searchState.lastFocus = document.activeElement;
       el.hidden = false;
       document.body.classList.add('search-open');
       input.value = '';
@@ -481,6 +540,9 @@
     function closeSearch() {
       el.hidden = true;
       document.body.classList.remove('search-open');
+      if (searchState.lastFocus && searchState.lastFocus.focus) {
+        setTimeout(function () { searchState.lastFocus.focus(); }, 0);
+      }
     }
 
     input.addEventListener('input', render);
@@ -499,6 +561,15 @@
       }
     });
 
+    el.addEventListener('keydown', function (e) {
+      if (e.key !== 'Tab') return;
+      var focusables = Array.prototype.slice.call(el.querySelectorAll('input, button')).filter(function (node) { return !node.disabled && node.offsetParent !== null; });
+      if (!focusables.length) return;
+      var first = focusables[0];
+      var last = focusables[focusables.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    });
     el.addEventListener('mousedown', function (e) { if (e.target === el) closeSearch(); });
     if (cancel) cancel.addEventListener('click', closeSearch);
 
@@ -513,7 +584,7 @@
         e.preventDefault();
         if (el.hidden) openSearch(); else closeSearch();
       }
-      if (e.key === 'Escape' && !el.hidden) closeSearch();
+      if (e.key === 'Escape' && !el.hidden) { closeSearch(); e.stopImmediatePropagation(); }
     });
   }
 

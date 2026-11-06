@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://anaz21.github.io/star-citizen-assistant/sitemap.xml

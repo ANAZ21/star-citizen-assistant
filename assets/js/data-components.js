@@ -65,9 +65,9 @@ window.SC_COMPONENTS = [{"id":"0ed88703-3183-48c8-95f1-eda2b5b4381a","type":"pow
       if (!SC_I18N.manufacturers[key]) SC_I18N.manufacturers[key] = SC_COMPONENT_META.manufacturers[key];
     });
     SC_I18N.shops = Object.assign(SC_I18N.shops || {}, {
-      'Platinum Bay': 'Platinum Bay 配件店',
+      'Platinum Bay': '白金湾',
       'Ship Parts': '飞船配件',
-      'Omega Pro': 'Omega Pro 配件店',
+      'Omega Pro': '欧米伽Pro',
       'Item Shop': '物品商店',
       'shop_terminal': '商店终端'
     });
@@ -75,6 +75,11 @@ window.SC_COMPONENTS = [{"id":"0ed88703-3183-48c8-95f1-eda2b5b4381a","type":"pow
   if (!window.SC_SHOPS || !SC_SHOPS.locations) return;
   SC_COMPONENTS.forEach(function (component) {
     component.shops.forEach(function (shop) {
+      if (window.SC && SC.componentShopLocId) {
+        var resolved = SC.componentShopLocId(shop);
+        if (resolved) shop.locId = resolved;
+        if (SC.componentShopBrand) shop.shop = SC.componentShopBrand(shop.shop);
+      }
       if (!shop.locId) return;
       var target = SC_SHOPS.locations[shop.locId];
       if (!target && window.SC && SC.locationById && SC.locationById(shop.locId)) {
