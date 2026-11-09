@@ -7,9 +7,10 @@
 
   if (document.body.getAttribute('data-page') !== 'ships') return;
 
+  var PAGE_SIZE = 36;
   var state = {
     q: '', role: '全部', size: '全部', maker: '', status: '', sort: 'default',
-    favOnly: false, shopOnly: false, compare: []
+    favOnly: false, shopOnly: false, compare: [], limit: PAGE_SIZE
   };
   var els = {};
 
@@ -180,6 +181,7 @@
   function bindEvents() {
     els.search.addEventListener('input', SC.debounce(function () {
       state.q = els.search.value.trim().toLowerCase();
+      state.limit = PAGE_SIZE;
       render();
     }, 120));
 
@@ -187,27 +189,31 @@
       var btn = e.target.closest('[data-role]'); if (!btn) return;
       state.role = btn.getAttribute('data-role');
       SC.$$('.chip', els.roleChips).forEach(function (b) { b.classList.toggle('active', b === btn); });
+      state.limit = PAGE_SIZE;
       render();
     });
     els.sizeChips.addEventListener('click', function (e) {
       var btn = e.target.closest('[data-size]'); if (!btn) return;
       state.size = btn.getAttribute('data-size');
       SC.$$('.chip', els.sizeChips).forEach(function (b) { b.classList.toggle('active', b === btn); });
+      state.limit = PAGE_SIZE;
       render();
     });
 
-    els.maker.addEventListener('change', function () { state.maker = els.maker.value; render(); });
-    els.status.addEventListener('change', function () { state.status = els.status.value; render(); });
-    els.sort.addEventListener('change', function () { state.sort = els.sort.value; render(); });
+    els.maker.addEventListener('change', function () { state.maker = els.maker.value; state.limit = PAGE_SIZE; render(); });
+    els.status.addEventListener('change', function () { state.status = els.status.value; state.limit = PAGE_SIZE; render(); });
+    els.sort.addEventListener('change', function () { state.sort = els.sort.value; state.limit = PAGE_SIZE; render(); });
 
     els.favFilter.addEventListener('click', function () {
       state.favOnly = !state.favOnly;
       els.favFilter.classList.toggle('active', state.favOnly);
+      state.limit = PAGE_SIZE;
       render();
     });
     els.shopFilter.addEventListener('click', function () {
       state.shopOnly = !state.shopOnly;
       els.shopFilter.classList.toggle('active', state.shopOnly);
+      state.limit = PAGE_SIZE;
       render();
     });
 
@@ -270,7 +276,7 @@
   }
 
   function resetFilters() {
-    state.q = ''; state.role = '全部'; state.size = '全部'; state.maker = ''; state.status = ''; state.sort = 'default'; state.favOnly = false; state.shopOnly = false;
+    state.q = ''; state.role = '全部'; state.size = '全部'; state.maker = ''; state.status = ''; state.sort = 'default'; state.favOnly = false; state.shopOnly = false; state.limit = PAGE_SIZE;
     els.search.value = ''; els.maker.value = ''; els.status.value = ''; els.sort.value = 'default';
     els.favFilter.classList.remove('active'); els.shopFilter.classList.remove('active');
     if (SC.syncSelects) SC.syncSelects();
@@ -556,6 +562,9 @@
     els.count.textContent = '共 ' + SC.ships.length + ' 艘 · 当前 ' + list.length + ' 艘';
     updateTray();
 
+    var oldMore = document.getElementById('ship-load-more');
+    if (oldMore) oldMore.remove();
+
     if (!list.length) {
       els.grid.innerHTML = '<div class="empty-state"><b>没有匹配的飞船</b>调整筛选条件。<button class="btn-small" type="button" id="empty-reset" style="margin-top:14px">清空筛选</button></div>';
       var er = document.getElementById('empty-reset');
@@ -563,7 +572,21 @@
       return;
     }
 
-    els.grid.innerHTML = list.map(function (s, i) { return shipCardMarkup(s, i); }).join('');
+    var shown = list.slice(0, state.limit);
+    els.grid.innerHTML = shown.map(function (s, i) { return shipCardMarkup(s, i); }).join('');
+
+    if (list.length > shown.length) {
+      var more = document.createElement('button');
+      more.id = 'ship-load-more';
+      more.type = 'button';
+      more.className = 'ship-load-more';
+      more.innerHTML = '加载更多飞船 <small>还有 ' + (list.length - shown.length) + ' 艘</small>';
+      more.addEventListener('click', function () {
+        state.limit += PAGE_SIZE;
+        render();
+      });
+      els.grid.insertAdjacentElement('afterend', more);
+    }
 
     if (typeof SC.refreshReveal === 'function') SC.refreshReveal();
     if (SC.bindTilt) SC.bindTilt('.ship-card');

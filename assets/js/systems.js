@@ -100,6 +100,7 @@ const atlasState = {
 let renderer = null;
 let scene = null;
 let camera = null;
+let atlasInView = true;
 let systemGroup = null;
 let starField = null;
 let labelLayer = null;
@@ -1377,6 +1378,10 @@ function resizeAtlas(width, height) {
 function animate(t) {
   requestAnimationFrame(animate);
   if (!renderer) return;
+  if (document.hidden || !atlasInView) {
+    lastFrame = (typeof t === 'number' ? t : performance.now()) * 0.001;
+    return;
+  }
   if (typeof t !== 'number') t = performance.now();
   const now = t * 0.001;
   const delta = Math.min(now - (lastFrame || now), 0.05);
@@ -1465,13 +1470,19 @@ function initAtlas() {
     }
     return;
   }
-  renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
+  renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 1.5));
   renderer.setSize(atlasW, atlasH);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.1;
   renderer.domElement.setAttribute('aria-label', '斯坦顿、派罗与尼克斯三维星系图');
   els.canvas.appendChild(renderer.domElement);
+  if ('IntersectionObserver' in window) {
+    const viewObserver = new IntersectionObserver((entries) => {
+      atlasInView = entries.some((entry) => entry.isIntersecting);
+    }, { threshold: 0.01 });
+    viewObserver.observe(els.canvas);
+  }
 
   scene = new THREE.Scene();
   camera = new THREE.PerspectiveCamera(44, atlasW / atlasH, 0.1, 600);

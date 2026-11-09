@@ -351,3 +351,27 @@ dialog#ship-modal { width: min(1240px, calc(100vw - 72px)); max-width: 1240px; }
 .search-overlay { z-index: 10000; }
 .desktop-notice { position: fixed; z-index: 10001; left: 50%; bottom: 18px; transform: translateX(-50%); width: min(92vw, 520px); padding: 10px 14px; border: 1px solid rgba(100,210,255,.35); border-radius: 10px; background: rgba(6,12,17,.94); color: #cfe8f3; font-size: 12px; line-height: 1.6; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,.45); }
 @media (min-width: 901px) { .desktop-notice { display: none; } }
+
+/* ship list performance: skip offscreen card rendering and paginate */
+.ship-hud { content-visibility: auto; contain-intrinsic-size: auto 830px; }
+@media (max-width: 1200px) { .ship-hud { contain-intrinsic-size: auto 790px; } }
+.ship-load-more {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: fit-content;
+  min-width: 240px;
+  margin: 10px auto 34px;
+  padding: 13px 24px;
+  border: 1px solid rgba(99, 216, 255, .35);
+  border-radius: 999px;
+  background: rgba(8, 18, 26, .9);
+  color: #c9f2ff;
+  font-family: var(--font);
+  font-size: 14px;
+  cursor: pointer;
+  transition: border-color .2s, background .2s, color .2s;
+}
+.ship-load-more small { color: #7fa0b2; font-family: var(--font-mono); font-size: 11px; }
+.ship-load-more:hover { border-color: rgba(99, 216, 255, .7); background: rgba(12, 30, 42, .95); color: #fff; }
