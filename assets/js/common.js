@@ -24,8 +24,10 @@
 
   (function applyShipChineseNames() {
     var extra = window.SC_SHIP_CN_EXTRA || {};
+    var statuses = window.SC_SHIP_STATUS_OVERRIDES || {};
     (SC.ships || []).forEach(function (ship) {
       if (extra[ship.id] && (!ship.cn || ship.cn === ship.name)) ship.cn = extra[ship.id];
+      if (statuses[ship.id]) ship.status = statuses[ship.id];
     });
   })();
 

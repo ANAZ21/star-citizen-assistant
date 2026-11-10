@@ -22,3 +22,11 @@ window.SC_SHIP_CN_EXTRA = {
   'starlancer-max': '星际枪骑兵 MAX',
   'starlancer-tac': '星际枪骑兵 TAC'
 };
+
+/* 官网生产状态更新：由概念转为可飞 */
+window.SC_SHIP_STATUS_OVERRIDES = {
+  'perseus': '可飞',
+  'apollo-triage': '可飞',
+  'idris-p': '可飞',
+  'starlancer-tac': '可飞'
+};
