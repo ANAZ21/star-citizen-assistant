@@ -413,7 +413,10 @@
     return Number(value).toLocaleString('en-US', { maximumFractionDigits: 1 });
   }
 
-  function pilotDps(detail) {
+  function fixedDps(ship, detail) {
+    var map = window.SC_SHIP_FIXED_DPS || {};
+    if (map[ship.id] != null) return map[ship.id];
+    if (detail.fixedDps != null) return detail.fixedDps;
     if (detail.pilotDps != null) return detail.pilotDps;
     return detail.dps;
   }
@@ -445,7 +448,7 @@
       ['量子燃料', detail.qFuel ? oneDecimal(detail.qFuel) + ' SCU' : '—'],
       ['量子航程', rangeText(detail.qRange)],
       ['机动', (agility.pitch || agility.yaw || agility.roll) ? oneDecimal(agility.pitch) + '/' + oneDecimal(agility.yaw) + '/' + oneDecimal(agility.roll) : '—'],
-      ['飞行员 DPS', dpsText(pilotDps(detail))],
+      ['固定武器 DPS', dpsText(fixedDps(ship, detail))],
       ['武器配置', shipWeaponHtml(ship), true]
     ];
   }
@@ -530,20 +533,20 @@
 
   function combatMarkup(ship) {
     var detail = shipDetails(ship);
-    var turret = Number(detail.turretDps) || 0;
-    var pilot = pilotDps(detail);
+    var fixed = fixedDps(ship, detail);
     var total = Number(detail.dps) || 0;
-    var stats = [['飞行员 DPS', dpsText(pilot)]];
-    if (turret > 0) {
-      stats.push(['炮手 DPS', dpsText(turret)]);
-      stats.push(['合计 DPS', dpsText(total || (Number(pilot) || 0) + turret)]);
+    var other = Math.max(0, total - fixed);
+    var stats = [['固定武器 DPS', dpsText(fixed)]];
+    if (other > 0.5) {
+      stats.push(['炮塔/遥控 DPS', dpsText(other)]);
+      stats.push(['合计 DPS', dpsText(total)]);
     }
-    if (detail.sustainedDps != null) stats.push(['持续 DPS', dpsText(detail.sustainedDps)]);
+    if (detail.sustainedDps != null) stats.push(['持续 DPS（全武器）', dpsText(detail.sustainedDps)]);
     if (detail.missileDamage != null) stats.push(['导弹齐射伤害', dpsText(detail.missileDamage)]);
     return '<div class="combat-stats">' + stats.map(function (row) {
       return '<div><span>' + row[0] + '</span><b>' + row[1] + '</b></div>';
     }).join('') + '</div>' +
-      '<p class="combat-note">DPS 按默认配置计算：飞行员 DPS 为飞行员可控制的武器，炮手 DPS 为需要炮手操作的炮塔；护盾、船体与机动数据见上方参数表。</p>';
+      '<p class="combat-note">固定武器由飞行员直接控制；炮塔、遥控、点防与舱门武器不计入固定武器 DPS。合计 DPS 假设所有武器都有人使用。护盾、船体与机动数据见上方参数表。</p>';
   }
 
   function detailMetricsMarkup(ship) {
